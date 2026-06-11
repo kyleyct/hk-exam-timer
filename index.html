@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>校園考試計時器</title>
+  <meta name="description" content="為香港老師設計的考試計時器：剩餘時間、考試時段、科目、備註，純前端、可離線。" />
+  <link rel="stylesheet" href="assets/style.css" />
+</head>
+<body>
+  <!-- 主控制面板 (閒置/設定時顯示) -->
+  <section id="setup" class="screen setup">
+    <div class="container">
+      <h1>校園考試計時器</h1>
+      <p class="subtitle">為 HK 老師而設 · 純前端 · 可離線使用</p>
+
+      <div class="card">
+        <h2>考試設定</h2>
+        <div class="row">
+          <label>科目
+            <input id="subject" type="text" list="subject-list" placeholder="例：中文 / English / Maths" />
+            <datalist id="subject-list">
+              <option value="中文">
+              <option value="English">
+              <option value="數學">
+              <option value="常識">
+              <option value="通識">
+              <option value="科學">
+              <option value="地理">
+              <option value="歷史">
+              <option value="中國歷史">
+              <option value="物理">
+              <option value="化學">
+              <option value="生物">
+              <option value="經濟">
+              <option value="企會財">
+              <option value="視覺藝術">
+              <option value="音樂">
+              <option value="體育">
+              <option value="DSE Mock">
+            </datalist>
+          </label>
+        </div>
+
+        <div class="row split">
+          <label>開考時間
+            <input id="start-time" type="time" step="60" />
+          </label>
+          <label>完卷時間
+            <input id="end-time" type="time" step="60" />
+          </label>
+          <label>考試時長 (分鐘)
+            <input id="duration" type="number" min="1" max="600" placeholder="例：60" />
+          </label>
+        </div>
+
+        <div class="row">
+          <label>備註 / 試場提示
+            <textarea id="notice" rows="3" placeholder="例：第 3 題 B 選項改為 C；第 5 題刪除；請帶鉛筆填答"></textarea>
+          </label>
+        </div>
+
+        <div class="row">
+          <label>備註字體大小
+            <input id="notice-size" type="range" min="16" max="120" value="36" />
+            <span id="notice-size-val" class="hint">36px</span>
+          </label>
+        </div>
+
+        <div class="row buttons">
+          <button id="fullscreen-btn" class="btn-secondary">全螢幕</button>
+          <button id="start-btn" class="btn-primary">開始考試</button>
+        </div>
+
+        <details class="hint-block">
+          <summary>使用提示</summary>
+          <ul>
+            <li>輸入「開考 + 完卷」或「開考 + 時長」其一即可</li>
+            <li>倒數到 0 時會響鬧，按 ESC 關閉</li>
+            <li>響鬧前 5 分鐘會閃紅色提示</li>
+            <li>離開分頁 / 系統休眠時,計時仍按真實時間走,返嚟唔會失準</li>
+            <li>響鬧用 Web Audio 播放(系統靜音都聽到)</li>
+          </ul>
+        </details>
+      </div>
+
+      <p class="footer">8 週 AI × 教育 · W2 工具</p>
+    </div>
+  </section>
+
+  <!-- 考試中畫面 -->
+  <section id="live" class="screen live hidden">
+    <header class="live-header">
+      <div class="live-subject">
+        <span class="subject-label">科目</span>
+        <span id="live-subject" class="subject-name">—</span>
+      </div>
+      <div class="live-meta">
+        <span id="live-slot" class="time-slot">— : — — : —</span>
+        <span id="live-status" class="status">考試中</span>
+      </div>
+    </header>
+
+    <main class="live-main">
+      <!-- 大倒數 -->
+      <div id="big-time" class="big-time">--:--:--</div>
+      <div id="big-time-label" class="big-time-label">剩餘時間</div>
+
+      <!-- 備註 (大字) -->
+      <div id="live-notice" class="live-notice"></div>
+    </main>
+
+    <footer class="live-footer">
+      <button id="pause-btn" class="btn-secondary">暫停</button>
+      <button id="end-btn" class="btn-danger">結束考試</button>
+    </footer>
+  </section>
+
+  <!-- 響鬧全屏 -->
+  <section id="alarm" class="screen alarm hidden">
+    <div class="alarm-content">
+      <div class="alarm-icon">⏰</div>
+      <div class="alarm-title">時間到</div>
+      <div id="alarm-subject" class="alarm-subject">—</div>
+      <div class="alarm-hint">按 ESC 或點擊畫面關閉</div>
+    </div>
+  </section>
+
+  <script src="scripts/timer.js"></script>
+</body>
+</html>

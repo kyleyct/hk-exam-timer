@@ -1,85 +1,124 @@
 # 校園考試計時器
 
-> 為香港老師而設嘅考試計時器。**雙擊 `index.html` 就用得**。
+> 為香港教師設計的考試計時器。**雙擊 `index.html` 即可使用。**
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Made for HK Teachers](https://img.shields.io/badge/Made%20for-HK%20Teachers-orange.svg)](#)
+[![授權: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![為香港教師而設](https://img.shields.io/badge/Made%20for-HK%20Teachers-orange.svg)](#)
 
 ## 一句話總結
 
-考試時開個瀏覽器，自動倒數、自動響鬧、可顯示試場備註（題目更改等），純前端、零依賴、可離線用。
+考試時開啟瀏覽器，自動倒數、自動響鬧、可顯示試場公告（題目更改等），純前端、零依賴、可離線運作。
 
-## 點用
+## 使用方法
 
-1. 下載個 zip
+1. 下載 ZIP
 2. 雙擊 `index.html`
-3. 輸入科目、開考時間、考試時長
-4. 按「開始考試」 → 自動入全螢幕
+3. 輸入科目、卷別、開考時間、考試時長
+4. 按「開始考試」→ 自動進入全螢幕模式
 
-或者去 [GitHub Pages demo](https://kyleyct.github.io/hk-exam-timer/) 用 online 版（如果你開咗嘅話）。
+或前往 [GitHub Pages 示範](https://kyleyct.github.io/hk-exam-timer/) 使用線上版本（如已啟用）。
 
-## 點解做呢個
+## 設計理念
 
-> 學校試場用嘅計時器，唔係普通時鐘 app。
+> 學校試場所需的計時器，與一般時鐘應用程式截然不同。
 
-| 普通時鐘 app | 校園考試計時器 |
+| 一般時鐘應用程式 | 校園考試計時器 |
 |---|---|
-| 細字體，後排睇唔到 | 120-320px 大字體 |
-| 冇考試時段標示 | 顯示「HH:MM - HH:MM」|
-| 冇備註欄（題目更改）| 大字體備註，可調字級 |
-| 響鬧要 set 多個 | 一鍵開/暫停/結束 |
-| 分頁隱藏可能失準 | 用 `Date.now()` 真實時鐘，唔受影響 |
-| 系統靜音聽唔到 | Web Audio API，系統靜音都聽到 |
+| 字體細小，後排難以辨識 | 120-320 像素特大字體 |
+| 沒有考試時段標示 | 顯示「HH:MM - HH:MM」 |
+| 沒有公告欄位（題目更改）| 特大字體公告，字級可調 |
+| 響鬧需手動設定多組 | 一鍵啟動、暫停、結束 |
+| 分頁隱藏後可能失準 | 採用 `Date.now()` 真實時鐘，不受影響 |
+| 系統靜音時無法聽到 | 使用 Web Audio API，系統靜音時仍可聽到 |
 
 ## 功能
 
 - 開考 + 完卷時間 / 開考 + 時長 兩種輸入模式
-- 大字體倒數（自動按螢幕大小縮放）
+- 特大字體倒數（自動按螢幕大小縮放）
 - 考試時段顯示（HH:MM - HH:MM）
-- 科目顯示（內置 17 個 DSE 常用科目預設）
-- 備註欄（題目更改 / 場地提示）— 大字體 + 可調字級
-- 響鬧（時間到 + 全屏紅色 + ESC 關閉）
-- 5 分鐘前黃色提示、0 分鐘紅色閃爍
-- 暫停 / 繼續（Space 鍵）
+- 科目 + 卷別（搜尋式選單，內置香港中小學及 DSE 課程）
+- 試場公告（題目更改 / 場地提示）— 特大字體，可即時編輯，字級可調
+- 響鬧（時間到 + 全螢幕綠色 + 「結束考試」停止）
+- 5 分鐘前黃色提示、0 分鐘紅色閃爍、超時灰階顯示
+- 暫停 / 繼續（空白鍵）
 - 全螢幕模式
-- 系統靜音都聽到（Web Audio API）
+- 響鬧使用 Web Audio API，系統靜音時仍可聽到
 - 純前端 / 可離線 / 零依賴
+- 多語言（繁體中文 / 英文）— 可即時切換
 
-## 計時可靠度（重點）
+## 計時可靠度
 
-考試計時最怕「分頁被 suspend / 系統休眠 / 切去後台 → 返嚟失準」。
+考試計時最忌「分頁被暫停 / 系統休眠 / 切換至後台 → 返抵後失準」。
 
-呢個工具嘅做法：
-- **單一時間基準**：`Date.now()`（真實時鐘），唔靠 `setInterval` 累加
-- **響鬧觸發**：`setTimeout(endEpoch - now)`，到時即觸發，唔靠輪詢
-- **分頁隱藏**：`visibilitychange` 事件，返嚟即時用 `Date.now()` 重新校驗
-- **響鬧音**：Web Audio oscillator，唔靠 `<audio>` 自動播放（會被瀏覽器 block）
+本工具的處理方法：
 
-理論上，無論分頁隱藏幾耐、系統休眠幾耐，返嚟時間都準。
+- **單一時間基準**：`Date.now()`（真實時鐘），不依賴 `setInterval` 累加
+- **響鬧觸發**：`setTimeout(endEpoch - now)`，到時即觸發，不依賴輪詢
+- **分頁隱藏**：`visibilitychange` 事件，返抵後即時以 `Date.now()` 重新校驗
+- **響鬧音**：Web Audio 振盪器（oscillator），不依賴 `<audio>` 自動播放（會被瀏覽器阻擋）
 
-## 隱私
+理論上，不論分頁隱藏多久、系統休眠多久，返抵後時間依然準確。
 
-- 純前端，**冇任何資料上傳**
-- 唔用 cookie、唔用 localStorage
-- 關咗個 tab 全部嘢冇晒
+## 響鬧詳情
+
+- **顏色**：綠色（取代傳統紅色，較溫和）
+- **節奏**：1 秒嗶聲 + 0.5 秒靜默，循環直至用戶按「結束考試」
+- **音量**：使用 Web Audio gain 控制，於用戶手勢後啟動（避免自動播放限制）
+- **試響按鈕**：設定畫面提供「🔊 試響」按鈕，方便考試日前確認聲響正常
+
+## 私隱
+
+- 純前端，**無任何資料上傳**
+- 不使用 cookie、不使用 localStorage（語言偏好除外）
+- 關閉分頁後所有資料即時清除
 
 ## 開發
 
-純 HTML + CSS + Vanilla JS，**冇 build step**。
-打開 `index.html` 就能改，改完 push 即生效。
+純 HTML + CSS + 原生 JavaScript，**無建置步驟**。
+開啟 `index.html` 即可修改，修改後推送即生效（GitHub Pages 自動部署）。
+
+### 檔案結構
+
+```
+w2-exam-timer/
+├── index.html
+├── assets/
+│   ├── style.css
+│   └── i18n/
+│       ├── zh-HK.json     # 繁體中文 (預設)
+│       └── en.json        # 英文
+└── scripts/
+    ├── i18n.js            # 國際化框架
+    ├── combobox.js        # 搜尋式選單組件
+    └── timer.js           # 計時器核心邏輯
+```
+
+### 多語言
+
+採用輕量自製 i18n 框架：
+
+- 字典檔案：`assets/i18n/{語言}.json`
+- 翻譯函數：`window.i18n.t('key')`
+- DOM 應用：HTML 元素加 `data-i18n="key"` 屬性，自動替換文字
+- 變數插值：`t('greeting', { name: '老師' })`
+- 偏好儲存：`localStorage['w2_lang']`
+
+新增語言的方法：於 `assets/i18n/` 增添 JSON 檔案，並於 `scripts/i18n.js` 的 `SUPPORTED` 陣列中登記。
 
 ## 已知限制
 
-- 響鬧音依賴 Web Audio API（Safari 14+、Chrome 全支援；IE 唔支援）
-- 第一次進入 live 畫面時，瀏覽器可能問「允許全螢幕」
+- 響鬧音依賴 Web Audio API（Safari 14+、Chrome 全支援；IE 不支援）
+- 第一次進入考試畫面時，瀏覽器可能詢問「允許全螢幕」
+- iOS Safari 對 Web Audio 自動播放有限制，必須於用戶互動後啟動（本工具已於開始考試按鈕內啟動）
+- 響鬧使用 Web Audio 振盪器，並非錄製音檔；音調固定為 880 Hz（A5 音高），可由用戶調節音量但無法更換音樂
 
-## License
+## 授權
 
 MIT
 
 ## 致謝
 
-呢個係「**8 週 AI × 教育**」公開專案計劃嘅第二個工具。
-其他工具：[W1 全港學校列表](https://github.com/kyleyct/hk-schools) / [8 週總集](https://github.com/kyleyct/8-weeks-ai-edu)
+本工具為「**8 週 AI × 教育**」公開專案計劃的第二個工具。
 
-由 [Kyle Yeung](https://github.com/kyleyct) 製作 · 2026
+- 其他工具：[W1 全港學校列表](#) / [8 週總集](#)
+- 由 [Kyle Yeung](https://github.com/kyleyct) 製作 · 2026

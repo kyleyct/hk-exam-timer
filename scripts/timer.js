@@ -1,13 +1,19 @@
 /**
- * 校園考試計時器
- * 純 vanilla JS,零依賴
+ * timer.js — 校園考試計時器 v0.2
  *
- * 計時可靠性設計:
- * - 單一時間基準:Date.now() (真實時鐘),唔用 setInterval 累加
- * - 渲染頻率:1Hz (requestAnimationFrame 控制 ~1fps)
- * - 響鬧觸發:setTimeout(到點時間 - 現在),唔靠 setInterval
- * - 分頁隱藏:visibilitychange 時暫停渲染,恢復時用 Date.now() 重新校驗
- * - 響鬧音:Web Audio API (oscillator + gain envelope),避開 autoplay 限制
+ * 階段 1 改動:
+ * - 響鬧改綠色 (CSS 配合, JS 只 emit 事件)
+ * - 響鬧使用 setInterval loop, 確保長響
+ * - 公告可於考試中即時編輯 (contenteditable)
+ * - 公告常駐於 live + alarm screen
+ * - i18n 整合 (t() 函數 from window.i18n)
+ * - Combobox 取代 datalist (search + free input)
+ * - 響鬧 debug: 5 秒測試 mode via ?test=alarm5
+ *
+ * 設計重點:
+ * - Date.now() 為單一時間基準 (唔用 setInterval 累加)
+ * - visibilitychange 自動校驗
+ * - 響鬧用 oscillator + setInterval loop
  */
 
 (function () {
@@ -21,16 +27,25 @@
 
   // ==================== State ====================
   const state = {
-    endEpoch: 0,        // 響鬧時的 Unix ms
-    pauseEpoch: 0,      // 暫停時的 Unix ms
-    pausedTotal: 0,     // 累計暫停的 ms
-    pausedAt: 0,        // 當前暫停開始時間
+    endEpoch: 0,
+    pausedTotal: 0,
+    pausedAt: 0,
     isPaused: false,
     subject: '',
-    slot: '',           // "HH:MM - HH:MM"
+    paper: '',
+    slot: '',
     notice: '',
     alarmPlayed: false,
+    alarmLoopId: null,
     rafId: null,
+  };
+
+  // ==================== i18n helper ====================
+  const t = (key, vars) => {
+    if (window.i18n && window.i18n.isReady && window.i18n.isReady()) {
+      return window.i18n.t(key, vars);
+    }
+    return key;  // fallback
   };
 
   // ==================== 音 ====================
@@ -40,19 +55,24 @@
       try {
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       } catch (e) {
-        console.warn('Web Audio not supported', e);
+        console.warn('[timer] Web Audio not supported:', e);
       }
+    }
+    if (audioCtx && audioCtx.state === 'suspended') {
+      audioCtx.resume().catch(() => {});
     }
     return audioCtx;
   }
 
-  function playAlarm() {
+  /** 響鬧長響: 1 秒嗶 + 0.5 秒靜, loop until stop */
+  function startAlarmLoop() {
+    if (state.alarmLoopId) return;  // already running
     const ctx = ensureAudio();
     if (!ctx) return;
-    if (ctx.state === 'suspended') ctx.resume();
 
-    // 響鬧:3 次嗶嗶,每次 200ms on / 200ms off
-    const beep = (startAt) => {
+    console.log('[timer] alarm loop started at', new Date().toISOString());
+
+    function beep(startAt, duration) {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.connect(gain);
@@ -61,16 +81,53 @@
       osc.frequency.value = 880;
       gain.gain.setValueAtTime(0, startAt);
       gain.gain.linearRampToValueAtTime(0.5, startAt + 0.02);
-      gain.gain.setValueAtTime(0.5, startAt + 0.18);
-      gain.gain.linearRampToValueAtTime(0, startAt + 0.2);
+      gain.gain.setValueAtTime(0.5, startAt + duration - 0.02);
+      gain.gain.linearRampToValueAtTime(0, startAt + duration);
       osc.start(startAt);
-      osc.stop(startAt + 0.21);
-    };
-
-    const t0 = ctx.currentTime;
-    for (let i = 0; i < 6; i++) {
-      beep(t0 + i * 0.4);
+      osc.stop(startAt + duration + 0.01);
     }
+
+    let beat = 0;
+    function playBeat() {
+      const now = ctx.currentTime;
+      // 1 秒嗶 + 0.5 秒靜
+      beep(now, 1.0);
+      // 每 1.5 秒重複
+      beat++;
+    }
+    playBeat();
+    state.alarmLoopId = setInterval(playBeat, 1500);
+  }
+
+  function stopAlarmLoop() {
+    if (state.alarmLoopId) {
+      clearInterval(state.alarmLoopId);
+      state.alarmLoopId = null;
+      console.log('[timer] alarm loop stopped');
+    }
+    // 即時靜音: 暫停 audio context
+    if (audioCtx) {
+      audioCtx.suspend().catch(() => {});
+    }
+  }
+
+  function playTestBeep() {
+    const ctx = ensureAudio();
+    if (!ctx) return;
+    console.log('[timer] test beep at', new Date().toISOString());
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = 'square';
+    osc.frequency.value = 880;
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(0.5, now + 0.02);
+    gain.gain.setValueAtTime(0.5, now + 0.4);
+    gain.gain.linearRampToValueAtTime(0, now + 0.5);
+    osc.start(now);
+    osc.stop(now + 0.55);
   }
 
   // ==================== 計算 ====================
@@ -89,7 +146,6 @@
     return `${pad2(start.getHours())}:${pad2(start.getMinutes())} - ${pad2(end.getHours())}:${pad2(end.getMinutes())}`;
   }
 
-  // ==================== 倒數 ====================
   function nowEpoch() {
     return Date.now() - state.pausedTotal + (state.isPaused ? (Date.now() - state.pausedAt) : 0);
   }
@@ -100,20 +156,27 @@
 
   // ==================== 渲染 ====================
   function render() {
-    if (state.alarmPlayed) return;  // 響鬧後唔再 render
+    if (state.alarmPlayed) return;
 
     const rem = remainingSec();
     const el = $('big-time');
-    el.textContent = rem >= 0 ? formatHHMMSS(rem) : `-${formatHHMMSS(-rem)}`;
+    el.textContent = formatHHMMSS(rem);
 
-    // 樣式:5 分鐘內 warning;0 分鐘內 danger
-    el.classList.remove('warning', 'danger');
-    if (rem <= 0) el.classList.add('danger');
-    else if (rem <= 300) el.classList.add('warning');
+    el.classList.remove('warning', 'danger', 'expired');
+    const label = $('big-time-label');
+    if (rem < 0) {
+      el.classList.add('expired');
+      label.textContent = `${t('live.expired_for')} ${formatHHMMSS(-rem).replace(/^-/, '')}`;
+    } else if (rem === 0) {
+      el.classList.add('danger');
+      label.textContent = t('live.finished');
+    } else if (rem <= 300) {
+      el.classList.add('warning');
+      label.textContent = t('live.remaining');
+    } else {
+      label.textContent = t('live.remaining');
+    }
 
-    $('big-time-label').textContent = rem > 0 ? '剩餘時間' : (rem === 0 ? '時間到' : '已超時');
-
-    // 響鬧
     if (rem <= 0 && !state.alarmPlayed) {
       triggerAlarm();
     }
@@ -128,55 +191,55 @@
 
   // ==================== 響鬧 ====================
   function triggerAlarm() {
+    if (state.alarmPlayed) return;
     state.alarmPlayed = true;
     if (state.rafId) cancelAnimationFrame(state.rafId);
 
+    console.log('[timer] alarm triggered at', new Date().toISOString(), 'endEpoch=', state.endEpoch);
+
+    // 顯示響鬧畫面 (綠色)
     $('alarm-subject').textContent = state.subject || '—';
-    alarm.classList.remove('hidden');
-    playAlarm();
-  }
-
-  function dismissAlarm() {
-    alarm.classList.add('hidden');
-    // 響完後返去 live 畫面(已超時)
-  }
-
-  // ESC 關響鬧 / 點擊關響鬧
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && !alarm.classList.contains('hidden')) {
-      dismissAlarm();
+    if (state.paper) {
+      $('alarm-paper').textContent = state.paper;
+      $('alarm-paper').hidden = false;
+    } else {
+      $('alarm-paper').hidden = true;
     }
-  });
-  alarm.addEventListener('click', dismissAlarm);
+    alarm.classList.remove('hidden');
+    startAlarmLoop();
+  }
 
   // ==================== 暫停 ====================
   function togglePause() {
     if (state.isPaused) {
-      // 恢復
       state.pausedTotal += Date.now() - state.pausedAt;
       state.isPaused = false;
-      $('pause-btn').textContent = '暫停';
-      $('live-status').textContent = '考試中';
+      $('pause-btn').textContent = t('button.pause');
+      $('live-status').textContent = t('live.running');
       $('live-status').classList.remove('paused');
-      // 重設響鬧 timeout
       scheduleAlarm();
     } else {
-      // 暫停
       state.pausedAt = Date.now();
       state.isPaused = true;
-      $('pause-btn').textContent = '繼續';
-      $('live-status').textContent = '已暫停';
+      $('pause-btn').textContent = t('button.resume');
+      $('live-status').textContent = t('live.paused');
       $('live-status').classList.add('paused');
+      if (state.alarmTimeoutId) {
+        clearTimeout(state.alarmTimeoutId);
+        state.alarmTimeoutId = null;
+      }
     }
   }
 
-  // ==================== 響鬧 timeout (用 setTimeout 確保唔會因 render lag 錯過) ====================
+  // ==================== 響鬧 timeout ====================
   let alarmTimeoutId = null;
   function scheduleAlarm() {
     if (alarmTimeoutId) clearTimeout(alarmTimeoutId);
     const ms = state.endEpoch - nowEpoch();
+    console.log('[timer] schedule alarm in', ms, 'ms');
     if (ms > 0) {
       alarmTimeoutId = setTimeout(() => {
+        console.log('[timer] alarm timeout fired');
         triggerAlarm();
       }, ms);
     } else {
@@ -186,14 +249,13 @@
 
   // ==================== 啟動考試 ====================
   function startExam() {
-    const subject = $('subject').value.trim() || '—';
+    const subject = $('subject').value.trim();
+    const paper = $('paper').value.trim();
     const startStr = $('start-time').value;
     const endStr = $('end-time').value;
     const durationStr = $('duration').value;
     const notice = $('notice').value.trim();
-    const noticeSize = parseInt($('notice-size').value, 10) || 36;
 
-    // 解析時間
     let startDate, endDate;
     const today = new Date();
     if (startStr && endStr) {
@@ -201,65 +263,62 @@
       const [eh, em] = endStr.split(':').map(Number);
       startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), sh, sm, 0);
       endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), eh, em, 0);
-      // 過咗午夜?
       if (endDate <= startDate) endDate.setDate(endDate.getDate() + 1);
     } else if (startStr && durationStr) {
       const [sh, sm] = startStr.split(':').map(Number);
       const dur = parseInt(durationStr, 10);
       if (!dur || dur < 1) {
-        alert('請輸入有效嘅考試時長');
+        alert(t('placeholder.duration'));
         return;
       }
       startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), sh, sm, 0);
       endDate = new Date(startDate.getTime() + dur * 60 * 1000);
-    } else if (startStr) {
-      alert('請輸入完卷時間或考試時長');
-      return;
     } else {
-      alert('請輸入開考時間');
+      alert(t('label.start_time'));
       return;
     }
 
-    // 開考時間已過? 自動從「現在」開始,但 endDate 仍跟用戶輸入
     let actualStart = startDate;
     const nowMs = Date.now();
     if (startDate.getTime() < nowMs) {
-      // 用戶輸入嘅開考時間已過 → 從現在開始
-      // 重新計算 endDate: 保留原 duration
       const originalDuration = endDate.getTime() - startDate.getTime();
       actualStart = new Date(nowMs);
       endDate = new Date(nowMs + originalDuration);
     }
 
     state.endEpoch = endDate.getTime();
-    state.pauseEpoch = 0;
     state.pausedTotal = 0;
     state.pausedAt = 0;
     state.isPaused = false;
     state.alarmPlayed = false;
     state.subject = subject;
+    state.paper = paper;
     state.slot = formatSlot(actualStart, endDate);
     state.notice = notice;
 
-    // 切到 live 畫面
     setup.classList.add('hidden');
     live.classList.remove('hidden');
 
-    $('live-subject').textContent = subject;
     $('live-slot').textContent = state.slot;
+    $('live-subject').textContent = state.subject || '—';
+    if (state.paper) {
+      $('live-paper').textContent = state.paper;
+      $('live-paper').hidden = false;
+      $('live-paper-sep').hidden = false;
+    } else {
+      $('live-paper').hidden = true;
+      $('live-paper-sep').hidden = true;
+    }
     $('live-notice').textContent = notice;
-    $('live-notice').style.fontSize = noticeSize + 'px';
-    $('pause-btn').textContent = '暫停';
+    $('live-status').textContent = t('live.running');
+    $('live-status').classList.remove('paused');
+    $('pause-btn').textContent = t('button.pause');
 
-    // 用戶互動後先創建 audio context
     ensureAudio();
-
-    // 開始
     render();
     scheduleAlarm();
     state.rafId = requestAnimationFrame(tick);
 
-    // 自動入全螢幕
     if (document.documentElement.requestFullscreen) {
       document.documentElement.requestFullscreen().catch(() => {});
     }
@@ -269,6 +328,7 @@
   function endExam() {
     if (state.rafId) cancelAnimationFrame(state.rafId);
     if (alarmTimeoutId) clearTimeout(alarmTimeoutId);
+    if (state.alarmLoopId) clearInterval(state.alarmLoopId);
     state.alarmPlayed = true;
 
     if (document.fullscreenElement) {
@@ -277,38 +337,121 @@
     live.classList.add('hidden');
     alarm.classList.add('hidden');
     setup.classList.remove('hidden');
+    state.alarmLoopId = null;
+  }
+
+  // ==================== 公告即時編輯 ====================
+  function initNoticeEditor() {
+    const noticeEl = $('live-notice');
+    if (!noticeEl) return;
+
+    // 鍵盤: Enter = 換行, Esc = 退出編輯
+    noticeEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        noticeEl.blur();
+      }
+    });
+
+    // blur 後保存到 state
+    noticeEl.addEventListener('blur', () => {
+      state.notice = noticeEl.textContent.trim();
+      console.log('[timer] notice updated:', state.notice);
+    });
   }
 
   // ==================== 事件綁定 ====================
-  $('start-btn').addEventListener('click', startExam);
-  $('pause-btn').addEventListener('click', togglePause);
-  $('end-btn').addEventListener('click', () => {
-    if (confirm('確定要結束考試?')) endExam();
-  });
-  $('fullscreen-btn').addEventListener('click', () => {
-    if (document.documentElement.requestFullscreen) {
-      document.documentElement.requestFullscreen();
-    }
-  });
+  function bindEvents() {
+    $('start-btn').addEventListener('click', startExam);
+    $('pause-btn').addEventListener('click', togglePause);
+    $('end-btn').addEventListener('click', () => {
+      if (confirm(t('button.end') + '?')) endExam();
+    });
+    $('fullscreen-btn').addEventListener('click', () => {
+      if (document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen();
+      }
+    });
+    $('test-alarm-btn').addEventListener('click', () => {
+      ensureAudio();
+      playTestBeep();
+    });
 
-  // 備註字體大小 live preview
-  $('notice-size').addEventListener('input', (e) => {
-    $('notice-size-val').textContent = e.target.value + 'px';
-  });
+    $('notice-size').addEventListener('input', (e) => {
+      const val = e.target.value;
+      $('notice-size-val').textContent = val + 'px';
+      const noticeEl = $('live-notice');
+      if (noticeEl) noticeEl.style.fontSize = val + 'px';
+    });
 
-  // 分頁隱藏時唔好觸發響鬧中斷,但確保 render 仍基於真實時間
-  document.addEventListener('visibilitychange', () => {
-    if (!document.hidden && !state.alarmPlayed) {
-      render();  // 立即重新計算並 render
+    // 語言切換
+    const langSel = $('lang-select');
+    if (langSel) {
+      langSel.value = window.i18n ? window.i18n.getLang() : 'zh-HK';
+      langSel.addEventListener('change', (e) => {
+        window.i18n.setLang(e.target.value);
+      });
     }
-  });
 
-  // 鍵盤快捷鍵:在 live 畫面 Space = 暫停/繼續
-  document.addEventListener('keydown', (e) => {
-    if (live.classList.contains('hidden')) return;
-    if (e.key === ' ') {
-      e.preventDefault();
-      togglePause();
+    // i18n 變化時 re-bind confirm 等動態文字
+    document.addEventListener('i18n:changed', () => {
+      const isPaused = state.isPaused;
+      $('pause-btn').textContent = isPaused ? t('button.resume') : t('button.pause');
+      const st = $('live-status');
+      if (isPaused) st.textContent = t('live.paused');
+      else if (state.alarmPlayed) st.textContent = t('live.finished');
+      else st.textContent = t('live.running');
+    });
+
+    // 鍵盤快捷鍵
+    document.addEventListener('keydown', (e) => {
+      if (live.classList.contains('hidden')) return;
+      if (e.target.matches('input, textarea, [contenteditable]')) return;
+      if (e.key === ' ') {
+        e.preventDefault();
+        togglePause();
+      }
+    });
+
+    // 分頁隱藏時重新校驗
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden && !state.alarmPlayed) {
+        render();
+      }
+    });
+  }
+
+  // ==================== 初始化 ====================
+  function init() {
+    bindEvents();
+    initNoticeEditor();
+
+    // 5 秒響鬧測試 mode (debug)
+    if (location.search.includes('test=alarm5')) {
+      console.log('[timer] test=alarm5 mode — alarm in 5s');
+      setTimeout(() => {
+        state.endEpoch = Date.now() + 1000;  // 1s 後觸發
+        state.subject = '[TEST] 試響測試';
+        state.paper = '';
+        setup.classList.add('hidden');
+        live.classList.remove('hidden');
+        $('live-slot').textContent = 'TEST — 00:00 - 00:00';
+        $('live-subject').textContent = state.subject;
+        render();
+        scheduleAlarm();
+        state.rafId = requestAnimationFrame(tick);
+      }, 5000);
     }
-  });
+  }
+
+  // 等 i18n ready 後 init
+  if (window.i18n) {
+    if (window.i18n.isReady()) {
+      init();
+    } else {
+      window.addEventListener('load', init);
+    }
+  } else {
+    init();
+  }
 })();

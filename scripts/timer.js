@@ -1,25 +1,24 @@
 /**
- * timer.js — 校園考試計時器 v0.2
+ * timer.js — 校園考試計時器 v0.3
  *
- * 階段 1 改動:
- * - 響鬧改綠色 (CSS 配合, JS 只 emit 事件)
- * - 響鬧使用 setInterval loop, 確保長響
- * - 公告可於考試中即時編輯 (contenteditable)
- * - 公告常駐於 live + alarm screen
- * - i18n 整合 (t() 函數 from window.i18n)
- * - Combobox 取代 datalist (search + free input)
- * - 響鬧 debug: 5 秒測試 mode via ?test=alarm5
+ * 階段 2 改動:
+ * - 對接 fold windows 結構 (4 個視窗)
+ * - 響鬧時所有視窗仍可見 (alarm screen 半透明)
+ * - reset windows 與計時器解耦
  *
- * 設計重點:
- * - Date.now() 為單一時間基準 (唔用 setInterval 累加)
+ * 階段 3 改動 (polish):
+ * - 響鬧: 響到結束為止 (已係 v0.2 行為, 確認)
+ * - 超時顯示: 0:00 → 0:01 → 0:02 ... 灰階 (已係 v0.2 行為)
+ *
+ * 設計:
+ * - Date.now() 為單一時間基準
  * - visibilitychange 自動校驗
- * - 響鬧用 oscillator + setInterval loop
+ * - 響鬧 setInterval loop (1秒嗶/0.5秒靜)
  */
 
 (function () {
   'use strict';
 
-  // ==================== DOM ====================
   const $ = (id) => document.getElementById(id);
   const setup = $('setup');
   const live = $('live');
@@ -37,15 +36,16 @@
     notice: '',
     alarmPlayed: false,
     alarmLoopId: null,
+    alarmTimeoutId: null,
     rafId: null,
   };
 
-  // ==================== i18n helper ====================
+  // ==================== i18n ====================
   const t = (key, vars) => {
     if (window.i18n && window.i18n.isReady && window.i18n.isReady()) {
       return window.i18n.t(key, vars);
     }
-    return key;  // fallback
+    return key;
   };
 
   // ==================== 音 ====================
@@ -64,12 +64,10 @@
     return audioCtx;
   }
 
-  /** 響鬧長響: 1 秒嗶 + 0.5 秒靜, loop until stop */
   function startAlarmLoop() {
-    if (state.alarmLoopId) return;  // already running
+    if (state.alarmLoopId) return;
     const ctx = ensureAudio();
     if (!ctx) return;
-
     console.log('[timer] alarm loop started at', new Date().toISOString());
 
     function beep(startAt, duration) {
@@ -87,13 +85,9 @@
       osc.stop(startAt + duration + 0.01);
     }
 
-    let beat = 0;
     function playBeat() {
       const now = ctx.currentTime;
-      // 1 秒嗶 + 0.5 秒靜
       beep(now, 1.0);
-      // 每 1.5 秒重複
-      beat++;
     }
     playBeat();
     state.alarmLoopId = setInterval(playBeat, 1500);
@@ -103,12 +97,8 @@
     if (state.alarmLoopId) {
       clearInterval(state.alarmLoopId);
       state.alarmLoopId = null;
-      console.log('[timer] alarm loop stopped');
     }
-    // 即時靜音: 暫停 audio context
-    if (audioCtx) {
-      audioCtx.suspend().catch(() => {});
-    }
+    if (audioCtx) audioCtx.suspend().catch(() => {});
   }
 
   function playTestBeep() {
@@ -197,7 +187,6 @@
 
     console.log('[timer] alarm triggered at', new Date().toISOString(), 'endEpoch=', state.endEpoch);
 
-    // 顯示響鬧畫面 (綠色)
     $('alarm-subject').textContent = state.subject || '—';
     if (state.paper) {
       $('alarm-paper').textContent = state.paper;
@@ -232,13 +221,12 @@
   }
 
   // ==================== 響鬧 timeout ====================
-  let alarmTimeoutId = null;
   function scheduleAlarm() {
-    if (alarmTimeoutId) clearTimeout(alarmTimeoutId);
+    if (state.alarmTimeoutId) clearTimeout(state.alarmTimeoutId);
     const ms = state.endEpoch - nowEpoch();
     console.log('[timer] schedule alarm in', ms, 'ms');
     if (ms > 0) {
-      alarmTimeoutId = setTimeout(() => {
+      state.alarmTimeoutId = setTimeout(() => {
         console.log('[timer] alarm timeout fired');
         triggerAlarm();
       }, ms);
@@ -327,7 +315,7 @@
   // ==================== 結束 ====================
   function endExam() {
     if (state.rafId) cancelAnimationFrame(state.rafId);
-    if (alarmTimeoutId) clearTimeout(alarmTimeoutId);
+    if (state.alarmTimeoutId) clearTimeout(state.alarmTimeoutId);
     if (state.alarmLoopId) clearInterval(state.alarmLoopId);
     state.alarmPlayed = true;
 
@@ -345,7 +333,6 @@
     const noticeEl = $('live-notice');
     if (!noticeEl) return;
 
-    // 鍵盤: Enter = 換行, Esc = 退出編輯
     noticeEl.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
         e.preventDefault();
@@ -353,7 +340,6 @@
       }
     });
 
-    // blur 後保存到 state
     noticeEl.addEventListener('blur', () => {
       state.notice = noticeEl.textContent.trim();
       console.log('[timer] notice updated:', state.notice);
@@ -384,7 +370,6 @@
       if (noticeEl) noticeEl.style.fontSize = val + 'px';
     });
 
-    // 語言切換
     const langSel = $('lang-select');
     if (langSel) {
       langSel.value = window.i18n ? window.i18n.getLang() : 'zh-HK';
@@ -393,7 +378,6 @@
       });
     }
 
-    // i18n 變化時 re-bind confirm 等動態文字
     document.addEventListener('i18n:changed', () => {
       const isPaused = state.isPaused;
       $('pause-btn').textContent = isPaused ? t('button.resume') : t('button.pause');
@@ -403,7 +387,6 @@
       else st.textContent = t('live.running');
     });
 
-    // 鍵盤快捷鍵
     document.addEventListener('keydown', (e) => {
       if (live.classList.contains('hidden')) return;
       if (e.target.matches('input, textarea, [contenteditable]')) return;
@@ -413,7 +396,6 @@
       }
     });
 
-    // 分頁隱藏時重新校驗
     document.addEventListener('visibilitychange', () => {
       if (!document.hidden && !state.alarmPlayed) {
         render();
@@ -421,16 +403,15 @@
     });
   }
 
-  // ==================== 初始化 ====================
+  // ==================== Init ====================
   function init() {
     bindEvents();
     initNoticeEditor();
 
-    // 5 秒響鬧測試 mode (debug)
     if (location.search.includes('test=alarm5')) {
       console.log('[timer] test=alarm5 mode — alarm in 5s');
       setTimeout(() => {
-        state.endEpoch = Date.now() + 1000;  // 1s 後觸發
+        state.endEpoch = Date.now() + 1000;
         state.subject = '[TEST] 試響測試';
         state.paper = '';
         setup.classList.add('hidden');
@@ -444,13 +425,9 @@
     }
   }
 
-  // 等 i18n ready 後 init
   if (window.i18n) {
-    if (window.i18n.isReady()) {
-      init();
-    } else {
-      window.addEventListener('load', init);
-    }
+    if (window.i18n.isReady()) init();
+    else window.addEventListener('load', init);
   } else {
     init();
   }

@@ -37,7 +37,10 @@
     "Countdown turns yellow in the last 5 minutes",
     "Time stays accurate even if you switch tabs or your system sleeps",
     "Uses Web Audio for the alarm — works even when system is muted",
-    "Notice can be edited any time during the exam"
+    "Notice can be edited any time during the exam",
+    "Four windows during the exam can be dragged and resized; press ⟳ (top-right) to reset"
   ],
+  "hint.toggle_window": "Minimize / expand window",
+  "hint.reset_windows": "Reset all windows to default layout",
   "footer.tagline": "8 weeks of AI × Education · W2 tool"
 }

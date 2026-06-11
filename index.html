@@ -30,7 +30,6 @@
         <div class="row split">
           <div>
             <label data-i18n="label.subject">科目</label>
-            <!-- Combobox: search + free input (vanilla JS) -->
             <div class="combobox" data-name="subject">
               <input type="text" id="subject" class="combobox-input"
                      autocomplete="off" spellcheck="false"
@@ -99,41 +98,67 @@
     </div>
   </section>
 
-  <!-- 考試中畫面 (重構: 採用 fold windows 模式將喺階段 2 引入) -->
+  <!-- 考試中畫面 — Fold Windows 模式 -->
   <section id="live" class="screen live hidden">
-    <header class="live-header">
-      <div class="live-meta">
+
+    <!-- 視窗 1: 考試資訊 (頂部) -->
+    <div id="window-info" class="fold-window fold-info" data-window="info">
+      <div class="window-handle" data-drag-handle>
+        <span class="window-title" data-i18n="live.time_slot">考試時段</span>
         <span id="live-slot" class="time-slot">— : — — : —</span>
         <span id="live-status" class="status" data-i18n="live.running">考試中</span>
       </div>
-      <div class="live-subject-display">
-        <span class="subject-label" data-i18n="label.subject">科目</span>
-        <span id="live-subject" class="subject-name">—</span>
-        <span class="subject-sep" id="live-paper-sep" hidden>·</span>
-        <span id="live-paper" class="subject-name" hidden></span>
+      <div class="window-body">
+        <div class="live-subject-display">
+          <span class="subject-label" data-i18n="label.subject">科目</span>
+          <span id="live-subject" class="subject-name">—</span>
+          <span class="subject-sep" id="live-paper-sep" hidden>·</span>
+          <span id="live-paper" class="subject-name" hidden></span>
+        </div>
       </div>
-    </header>
+      <div class="window-resize" data-resize-handle></div>
+    </div>
 
-    <main class="live-main">
-      <!-- 大倒數 -->
-      <div id="big-time" class="big-time">--:--:--</div>
-      <div id="big-time-label" class="big-time-label" data-i18n="live.remaining">剩餘時間</div>
+    <!-- 視窗 2: 倒數計時 (中央, 最大) -->
+    <div id="window-countdown" class="fold-window fold-countdown" data-window="countdown">
+      <div class="window-handle" data-drag-handle>
+        <span class="window-title" data-i18n="live.remaining">剩餘時間</span>
+      </div>
+      <div class="window-body countdown-body">
+        <div id="big-time" class="big-time">--:--:--</div>
+        <div id="big-time-label" class="big-time-label" data-i18n="live.remaining">剩餘時間</div>
+      </div>
+      <div class="window-resize" data-resize-handle></div>
+    </div>
 
-      <!-- 公告: 考試中可繼續編輯 (contenteditable) -->
-      <div id="live-notice-wrap" class="live-notice-wrap">
+    <!-- 視窗 3: 公告 (底部, 可摺疊) -->
+    <div id="window-notice" class="fold-window fold-notice" data-window="notice">
+      <div class="window-handle" data-drag-handle>
+        <span class="window-title" data-i18n="label.notice">公告 / 試場提示</span>
+        <button class="window-toggle" id="notice-toggle" data-i18n-title="hint.toggle_window"
+                title="最小化/展開">▾</button>
+      </div>
+      <div class="window-body notice-body">
         <div id="live-notice" class="live-notice" contenteditable="true"
              data-i18n-placeholder="placeholder.notice"
              placeholder="公告（可即時編輯）"></div>
       </div>
-    </main>
+      <div class="window-resize" data-resize-handle></div>
+    </div>
 
-    <footer class="live-footer">
+    <!-- 視窗 4: 控制列 (底部) -->
+    <div id="window-controls" class="fold-window fold-controls" data-window="controls">
       <button id="pause-btn" class="btn-secondary" data-i18n="button.pause">暫停</button>
       <button id="end-btn" class="btn-danger" data-i18n="button.end">結束考試</button>
-    </footer>
+    </div>
+
+    <!-- 重置視窗位置按鈕 (右上角小按鈕) -->
+    <button id="reset-windows-btn" class="reset-windows" data-i18n-title="hint.reset_windows"
+            title="重設視窗位置">⟳</button>
+
   </section>
 
-  <!-- 響鬧畫面: 改用綠色 (階段 1 sub-task 2) -->
+  <!-- 響鬧畫面: 改用綠色 -->
   <section id="alarm" class="screen alarm hidden" role="alertdialog" aria-live="assertive">
     <div class="alarm-content">
       <div class="alarm-icon">⏰</div>
@@ -144,8 +169,10 @@
     </div>
   </section>
 
+  <script src="assets/vendor/interact.min.js"></script>
   <script src="scripts/i18n.js"></script>
   <script src="scripts/combobox.js"></script>
+  <script src="scripts/fold-windows.js"></script>
   <script src="scripts/timer.js"></script>
 </body>
 </html>

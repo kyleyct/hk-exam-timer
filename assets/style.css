@@ -259,6 +259,11 @@ button:active { transform: scale(0.98); }
 .fold-window.resizing { opacity: 0.9; z-index: 10; }
 .fold-window.minimized .window-body { display: none; }
 .fold-window.minimized { height: auto !important; min-height: 0; }
+/* v0.3.2 rev 9: countdown 視窗 z-index 最高, 避免被其他視窗遮住 */
+.fold-countdown { z-index: 5; }
+.fold-info { z-index: 3; }
+.fold-notice { z-index: 2; }
+.fold-controls { z-index: 4; }
 
 .window-handle {
   display: flex;

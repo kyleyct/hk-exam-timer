@@ -26,47 +26,68 @@
   const STORAGE_KEY = 'w2_window_layout';
 
   // 預設版面
-  // v0.3.2 rev 8: countdown 喺中央, notice 喺 countdown 下方 120px
+  // v0.3.2 rev 9: 4 個 anchor 互唔重疊
+  //   - info     : 頂部 24px (考試時段)
+  //   - countdown: 中央 (大倒數)
+  //   - notice   : countdown 下方 120px (或 controls 之上 80px)
+  //   - controls : 底部 0
   const DEFAULT_LAYOUT = {
-    'info':     { anchor: 'top',    align: 'center', w: '60vw',  h: 96,   minimized: false },
-    'countdown':{ anchor: 'center', align: 'center', w: '50vw',  h: '60vh',minimized: false },
-    'notice':   { anchor: 'top',    align: 'center', w: '70vw',  h: 200,  minimized: false },
-    'controls': { anchor: 'bottom', align: 'center', w: '100vw', h: 72,   minimized: false },
+    'info':     { anchor: 'top',         align: 'center', w: '60vw',  h: 96,   minimized: false },
+    'countdown':{ anchor: 'center',      align: 'center', w: '50vw',  h: '60vh',minimized: false },
+    'notice':   { anchor: 'above-controls', align: 'center', w: '70vw', h: 160, minimized: false },
+    'controls': { anchor: 'bottom',      align: 'center', w: '100vw', h: 72,   minimized: false },
   };
 
   // 將 anchor 轉成 base top/left/right/bottom (without offset)
   function baseBoxPosition(cfg) {
-    // 用 margin: auto + position absolute 嚟處理 center
     let top = 'auto', left = 'auto', right = 'auto', bottom = 'auto';
     if (cfg.anchor === 'top') top = '24px';
     else if (cfg.anchor === 'center') {
       top = '0'; bottom = '0';
+    } else if (cfg.anchor === 'above-controls') {
+      // 喺 controls (h ~ 72) 之上
+      bottom = '88px';
     } else if (cfg.anchor === 'bottom') bottom = '0';
 
     if (cfg.align === 'left') left = '24px';
     else if (cfg.align === 'right') right = '24px';
     else {
-      // center: 用 margin: auto 自動置中
       left = '0'; right = '0';
     }
     return { top, left, right, bottom };
   }
 
   // 套用 offset 到 element top/left
+  // 將 base anchor value + user offset 結合寫入 element style
+  // 注意: anchor value 從 baseBoxPosition 嚟, 確保 anchor 同 offset 分離
   function applyOffset(el, cfg) {
     const base = baseBoxPosition(cfg);
     const dx = cfg._offsetX || 0;
     const dy = cfg._offsetY || 0;
 
-    if (cfg.anchor === 'top') el.style.top = (24 + dy) + 'px';
-    else if (cfg.anchor === 'center') {
+    // 解析 base 嘅 number (例如 '24px' -> 24)
+    const px = (v) => parseInt(v, 10) || 0;
+
+    if (cfg.anchor === 'top') {
+      el.style.top = (px(base.top) + dy) + 'px';
+    } else if (cfg.anchor === 'center') {
       el.style.top = dy + 'px';
       el.style.bottom = (-dy) + 'px';
-    } else if (cfg.anchor === 'bottom') el.style.bottom = (-dy) + 'px';
+    } else if (cfg.anchor === 'above-controls') {
+      // base 為 bottom: 88px, dy 為正向下移
+      el.style.bottom = (px(base.bottom) - dy) + 'px';
+    } else if (cfg.anchor === 'bottom') {
+      // base 為 bottom: 0, dy 為正向上移 (因為 bottom 愈大愈上)
+      el.style.bottom = (-dy) + 'px';
+    }
 
-    if (cfg.align === 'left') el.style.left = (24 + dx) + 'px';
-    else if (cfg.align === 'right') el.style.right = (-dx) + 'px';
-    else {
+    if (cfg.align === 'left') {
+      el.style.left = (px(base.left) + dx) + 'px';
+    } else if (cfg.align === 'right') {
+      // base 為 right: 24px, dx 為正向左移 (因為 right 愈大愈左)
+      el.style.right = (px(base.right) - dx) + 'px';
+    } else {
+      // center: left/right 都 0, dx 正向左右擴 (margin auto)
       el.style.left = dx + 'px';
       el.style.right = (-dx) + 'px';
     }
@@ -80,12 +101,6 @@
       const cfg = layout[name];
 
       el.style.position = 'absolute';
-      const base = baseBoxPosition(cfg);
-      el.style.top = base.top;
-      el.style.left = base.left;
-      el.style.right = base.right;
-      el.style.bottom = base.bottom;
-      el.style.margin = 'auto';
 
       // size (user override 優先)
       const MIN_W = 360, MIN_H = 120;
@@ -107,7 +122,7 @@
       const toggle = el.querySelector('.window-toggle');
       if (toggle) toggle.textContent = cfg.minimized ? '▴' : '▾';
 
-      // 套用 user offset
+      // 套用 anchor + offset (applyOffset 處理 base + offset)
       applyOffset(el, cfg);
     });
   }

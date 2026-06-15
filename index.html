@@ -25,11 +25,10 @@
         </div>
       </header>
 
-      <div class="card">
-        <h2 data-i18n="label.subject">科目</h2>
+      <div class="card primary-section">
+        <h2 data-i18n="label.start_time">考試設定</h2>
         <div class="row split">
-          <div>
-            <label data-i18n="label.subject">科目</label>
+          <label data-i18n="label.subject">科目
             <div class="combobox" data-name="subject">
               <input type="text" id="subject" class="combobox-input"
                      autocomplete="off" spellcheck="false"
@@ -37,9 +36,8 @@
                      placeholder="輸入或選擇科目" />
               <ul class="combobox-list" id="subject-list" hidden></ul>
             </div>
-          </div>
-          <div>
-            <label data-i18n="label.paper">卷別</label>
+          </label>
+          <label data-i18n="label.paper">卷別
             <div class="combobox" data-name="paper">
               <input type="text" id="paper" class="combobox-input"
                      autocomplete="off" spellcheck="false"
@@ -47,40 +45,37 @@
                      placeholder="例：卷一 / Paper 1 / MC" />
               <ul class="combobox-list" id="paper-list" hidden></ul>
             </div>
-          </div>
-        </div>
-
-        <h2 data-i18n="label.start_time">開考時間</h2>
-        <div class="row split">
+          </label>
           <label data-i18n="label.start_time">開考時間
             <input id="start-time" type="time" step="60"
                    data-i18n-placeholder="placeholder.start_time" placeholder="09:00" />
-          </label>
-          <label data-i18n="label.end_time">完卷時間
-            <input id="end-time" type="time" step="60"
-                   data-i18n-placeholder="placeholder.end_time" placeholder="10:30" />
           </label>
           <label data-i18n="label.duration">考試時長 (分鐘)
             <input id="duration" type="number" min="1" max="600"
                    data-i18n-placeholder="placeholder.duration" placeholder="60" />
           </label>
         </div>
+        <p class="hint primary-hint" data-i18n="hint.optional_end">完卷時間可選填, 留空則依開考時間 + 考試時長自動計算。</p>
+      </div>
 
-        <h2 data-i18n="label.notice">公告 / 試場提示</h2>
-        <div class="row">
-          <label data-i18n="label.notice">公告 / 試場提示
-            <textarea id="notice" rows="3"
-                      data-i18n-placeholder="placeholder.notice"
-                      placeholder="例：第三題 B 選項改為 C；第五題刪除"></textarea>
-          </label>
-        </div>
-
-        <div class="row">
-          <label data-i18n="label.notice_size">公告字體大小
-            <input id="notice-size" type="range" min="16" max="120" value="36" />
-            <span id="notice-size-val" class="hint">36px</span>
-          </label>
-        </div>
+      <div class="card secondary-section">
+        <details>
+          <summary data-i18n="label.optional_settings">▶ 公告及字體設定 (可選)</summary>
+          <div class="row">
+            <label data-i18n="label.notice">公告 / 試場提示
+              <textarea id="notice" rows="3"
+                        data-i18n-placeholder="placeholder.notice"
+                        placeholder="例：第三題 B 選項改為 C；第五題刪除"></textarea>
+            </label>
+          </div>
+          <div class="row">
+            <label data-i18n="label.notice_size">公告字體大小
+              <input id="notice-size" type="range" min="16" max="120" value="36" />
+              <span id="notice-size-val" class="hint">36px</span>
+            </label>
+          </div>
+        </details>
+      </div>
 
         <div class="row buttons">
           <button id="test-alarm-btn" class="btn-secondary" data-i18n="button.test_alarm">🔊 試響</button>

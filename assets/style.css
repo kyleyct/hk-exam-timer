@@ -119,6 +119,40 @@ html, body {
 }
 .hint { color: #94a3b8; font-size: 12px; margin-left: 8px; }
 
+/* v0.3.2 rev 11: 主要設定 (開始/結束/科目/倒數) 加大字體, 輔助設定保持原樣 */
+.primary-section .row.split {
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  gap: 16px;
+}
+.primary-section .row label {
+  font-size: 14px;
+  color: #cbd5e1;
+  font-weight: 500;
+  margin-bottom: 6px;
+}
+.primary-section .row input[type=text],
+.primary-section .row input[type=time],
+.primary-section .row input[type=number] {
+  padding: 12px 14px;
+  font-size: 18px;
+  font-weight: 500;
+}
+/* 響應式: 細螢幕疊回單欄 */
+@media (max-width: 720px) {
+  .primary-section .row.split { grid-template-columns: 1fr; }
+}
+.primary-hint { margin: 4px 0 0 0; }
+.secondary-section { padding: 0; }
+.secondary-section details { padding: 16px; }
+.secondary-section summary {
+  cursor: pointer;
+  color: #94a3b8;
+  font-size: 13px;
+  padding: 4px 0;
+}
+.secondary-section summary:hover { color: #cbd5e1; }
+.secondary-section details[open] summary { color: #cbd5e1; margin-bottom: 12px; }
+
 /* ==================== Combobox ==================== */
 .combobox {
   position: relative;

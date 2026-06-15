@@ -16,6 +16,8 @@
   "label.notice": "Notice / Announcement",
   "label.notice_size": "Notice font size",
   "label.language": "Language",
+  "label.optional_settings": "▶ Notice and font settings (optional)",
+  "hint.optional_end": "End time is optional. If blank, end time = start time + duration.",
   "placeholder.subject": "Type or select subject",
   "placeholder.paper": "e.g. Paper 1 / MC / Writing",
   "placeholder.start_time": "09:00",

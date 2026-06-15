@@ -16,6 +16,8 @@
   "label.notice": "公告 / 試場提示",
   "label.notice_size": "公告字體大小",
   "label.language": "語言",
+  "label.optional_settings": "▶ 公告及字體設定 (可選)",
+  "hint.optional_end": "完卷時間可選填, 留空則依開考時間 + 考試時長自動計算。",
   "placeholder.subject": "輸入或選擇科目",
   "placeholder.paper": "例：卷一 / Paper 1 / MC",
   "placeholder.start_time": "09:00",

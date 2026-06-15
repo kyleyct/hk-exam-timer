@@ -105,6 +105,66 @@ w2-exam-timer/
 
 新增語言的方法：於 `assets/i18n/` 增添 JSON 檔案，並於 `scripts/i18n.js` 的 `SUPPORTED` 陣列中登記。
 
+### 自訂版面 (Fold Windows)
+
+考試畫面嘅 4 個視窗 (info / countdown / notice / controls) 嘅位置、大小、摺疊狀態都係**完全可自訂**。
+
+**用戶層面 (UI 操作)：**
+- 拖曳視窗頂部 title bar 移動
+- 拖曳視窗右下角調整大小
+- 點擊視窗右上角 `▾` 摺疊/展開 (notice 視窗)
+- 點擊畫面右上角 `⟳` 一鍵重設所有視窗至預設值
+- 設定自動儲存至 `localStorage['w2_window_layout']`,reload 後保留
+
+**開發者層面 (修改預設版面):**
+
+打開 `scripts/fold-windows.js`, 修改 `DEFAULT_LAYOUT` 物件:
+
+```js
+const DEFAULT_LAYOUT = {
+  'info':     { anchor: 'top',             align: 'center', w: '60vw',  h: 96,   minimized: false },
+  'countdown':{ anchor: 'center',          align: 'center', w: '50vw',  h: '60vh',minimized: false },
+  'notice':   { anchor: 'above-controls',  align: 'center', w: '70vw',  h: 160,  minimized: false },
+  'controls': { anchor: 'bottom',          align: 'center', w: '100vw', h: 72,   minimized: false },
+};
+```
+
+可選 anchor 選項：
+- `top`: 視窗釘住頂部 (24px)
+- `center`: 視窗垂直水平置中
+- `bottom`: 視窗釘住底部 (0px)
+- `above-controls`: 視窗喺 controls 視窗之上 (88px 預留空間)
+
+可選 align 選項：
+- `left`: 視窗釘住左側 (24px)
+- `center`: 視窗水平置中
+- `right`: 視窗釘住右側 (24px)
+
+可選 size：
+- 字串 `'60vw'`、`'60vh'` → 視窗/螢幕百分比
+- 數字 `480` → 像素
+
+**自訂範例 (教師將倒數視窗放大置左):**
+```js
+'countdown':{ anchor: 'center', align: 'left', w: '60vw', h: '70vh', minimized: false },
+```
+
+**自訂範例 (將所有視窗垂直堆疊喺左側):**
+```js
+'info':     { anchor: 'top',    align: 'left', w: '40vw', h: 80,  minimized: false },
+'countdown':{ anchor: 'center', align: 'left', w: '40vw', h: '50vh', minimized: false },
+'notice':   { anchor: 'top',    align: 'left', w: '40vw', h: 200, minimized: false },
+'controls': { anchor: 'bottom', align: 'left', w: '40vw', h: 72,  minimized: false },
+```
+
+完成後用戶需清 `localStorage['w2_window_layout']` 或按畫面右上角 `⟳` 重設,新預設值先生效。
+
+**自訂樣式 (CSS):**
+
+- 大字時鐘字體：`assets/style.css` 嘅 `.fold-countdown .big-time` (用 `cqi` 跟 container 寬度)
+- 顏色主題：搜索 `rgba(...)` 即可改黑底配色
+- 字體大小：`.big-time` 嘅 `clamp(32px, 12cqi, 160px)` 改 min/max
+
 ## 已知限制
 
 - 響鬧音依賴 Web Audio API（Safari 14+、Chrome 全支援；IE 不支援）

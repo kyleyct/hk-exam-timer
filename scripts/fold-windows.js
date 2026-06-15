@@ -157,6 +157,12 @@
     }).resizable({
       edges: { left: false, right: true, top: false, bottom: true },
       margin: 8,
+      // v0.3.2: 強制 min size, 防止用戶縮太細導致大字被切走
+      modifiers: [
+        interact.modifiers.restrictSize({
+          min: { width: 360, height: 120 }
+        })
+      ],
       listeners: {
         start(event) {
           event.target.classList.add('resizing');

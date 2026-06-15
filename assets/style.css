@@ -245,12 +245,15 @@ button:active { transform: scale(0.98); }
   -webkit-backdrop-filter: blur(8px);
   display: flex;
   flex-direction: column;
-  min-width: 200px;
-  min-height: 60px;
+  /* v0.3.2: 加大 min-width 避免大字時鐘被切走 */
+  min-width: 280px;
+  min-height: 80px;
   user-select: none;
   -webkit-user-select: none;
   touch-action: none;
 }
+/* v0.3.2: countdown 視窗需要更闊 */
+.fold-countdown { min-width: 360px; }
 .fold-window.dragging { opacity: 0.9; z-index: 10; }
 .fold-window.resizing { opacity: 0.9; z-index: 10; }
 .fold-window.minimized .window-body { display: none; }

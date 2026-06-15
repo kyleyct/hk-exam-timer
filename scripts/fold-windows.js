@@ -93,15 +93,17 @@
       }
 
       // 大小
+      // v0.3.2: 強制 min-width 360, min-height 120 (倒數視窗大字唔會被切)
+      const MIN_W = 360, MIN_H = 120;
       if (typeof cfg.w === 'string' && cfg.w.endsWith('vw')) {
         el.style.width = cfg.w;
       } else if (typeof cfg.w === 'number') {
-        el.style.width = cfg.w + 'px';
+        el.style.width = Math.max(cfg.w, MIN_W) + 'px';
       }
       if (typeof cfg.h === 'string' && cfg.h.endsWith('vh')) {
         el.style.height = cfg.h;
       } else if (typeof cfg.h === 'number') {
-        el.style.height = cfg.h + 'px';
+        el.style.height = Math.max(cfg.h, MIN_H) + 'px';
       }
 
       // 摺疊

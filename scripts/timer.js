@@ -348,24 +348,37 @@
 
   // ==================== 事件綁定 ====================
   function bindEvents() {
-    $('start-btn').addEventListener('click', startExam);
-    $('pause-btn').addEventListener('click', togglePause);
-    $('end-btn').addEventListener('click', () => {
+    // v0.3.1: 用 bind() 統一處理 null, 避免 missing element 導致整個 init crash
+    // (eg. cached version mismatch, 開發中 hot reload, browser extension 改 DOM)
+    function bind(id, event, handler) {
+      const el = $(id);
+      if (!el) {
+        console.warn(`[timer] element #${id} not found, skip ${event} binding`);
+        return null;
+      }
+      el.addEventListener(event, handler);
+      return el;
+    }
+
+    bind('start-btn', 'click', startExam);
+    bind('pause-btn', 'click', togglePause);
+    bind('end-btn', 'click', () => {
       if (confirm(t('button.end') + '?')) endExam();
     });
-    $('fullscreen-btn').addEventListener('click', () => {
+    bind('fullscreen-btn', 'click', () => {
       if (document.documentElement.requestFullscreen) {
         document.documentElement.requestFullscreen();
       }
     });
-    $('test-alarm-btn').addEventListener('click', () => {
+    bind('test-alarm-btn', 'click', () => {
       ensureAudio();
       playTestBeep();
     });
 
-    $('notice-size').addEventListener('input', (e) => {
+    bind('notice-size', 'input', (e) => {
       const val = e.target.value;
-      $('notice-size-val').textContent = val + 'px';
+      const valLabel = $('notice-size-val');
+      if (valLabel) valLabel.textContent = val + 'px';
       const noticeEl = $('live-notice');
       if (noticeEl) noticeEl.style.fontSize = val + 'px';
     });
@@ -380,8 +393,10 @@
 
     document.addEventListener('i18n:changed', () => {
       const isPaused = state.isPaused;
-      $('pause-btn').textContent = isPaused ? t('button.resume') : t('button.pause');
+      const pauseBtn = $('pause-btn');
+      if (pauseBtn) pauseBtn.textContent = isPaused ? t('button.resume') : t('button.pause');
       const st = $('live-status');
+      if (!st) return;
       if (isPaused) st.textContent = t('live.paused');
       else if (state.alarmPlayed) st.textContent = t('live.finished');
       else st.textContent = t('live.running');
@@ -405,22 +420,32 @@
 
   // ==================== Init ====================
   function init() {
-    bindEvents();
-    initNoticeEditor();
+    // v0.3.1: 用 try-catch 包住, 任何 sub-step 失敗都唔會中斷 init
+    try { bindEvents(); }
+    catch (err) { console.error('[timer] bindEvents failed:', err); }
+
+    try { initNoticeEditor(); }
+    catch (err) { console.error('[timer] initNoticeEditor failed:', err); }
 
     if (location.search.includes('test=alarm5')) {
       console.log('[timer] test=alarm5 mode — alarm in 5s');
       setTimeout(() => {
-        state.endEpoch = Date.now() + 1000;
-        state.subject = '[TEST] 試響測試';
-        state.paper = '';
-        setup.classList.add('hidden');
-        live.classList.remove('hidden');
-        $('live-slot').textContent = 'TEST — 00:00 - 00:00';
-        $('live-subject').textContent = state.subject;
-        render();
-        scheduleAlarm();
-        state.rafId = requestAnimationFrame(tick);
+        try {
+          state.endEpoch = Date.now() + 1000;
+          state.subject = '[TEST] 試響測試';
+          state.paper = '';
+          setup.classList.add('hidden');
+          live.classList.remove('hidden');
+          const slotEl = $('live-slot');
+          const subjEl = $('live-subject');
+          if (slotEl) slotEl.textContent = 'TEST — 00:00 - 00:00';
+          if (subjEl) subjEl.textContent = state.subject;
+          render();
+          scheduleAlarm();
+          state.rafId = requestAnimationFrame(tick);
+        } catch (err) {
+          console.error('[timer] test=alarm5 setup failed:', err);
+        }
       }, 5000);
     }
   }

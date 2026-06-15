@@ -339,6 +339,8 @@ button:active { transform: scale(0.98); }
 
 .fold-countdown {
   background: rgba(0, 0, 0, 0.6);
+  /* v0.3.1: 啟用 container query, big-time 用 cqi 跟 container 寬度 */
+  container-type: inline-size;
 }
 .fold-countdown .countdown-body {
   display: flex;
@@ -346,16 +348,27 @@ button:active { transform: scale(0.98); }
   align-items: center;
   justify-content: center;
   padding: 20px;
+  /* 留 padding 防字緊貼邊 */
 }
 .fold-countdown .big-time {
-  font-size: clamp(80px, 14vw, 240px);
+  /* v0.3.1: 用 cqi 跟 container 寬度, 唔再用 vw (跟全螢幕寬度)
+   *   - 28% container width, min 60px, max 280px
+   *   - 自動隨 fold window 拖曳/resize 改變
+   *   - tabular-nums 確保 0:00 同 1:11 同寬
+   *   - 加 white-space: nowrap 防字斷行
+   */
+  font-size: clamp(60px, 28cqi, 280px);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   font-family: "SF Mono", Menlo, "Courier New", monospace;
-  letter-spacing: 3px;
+  letter-spacing: 0.05em;
   line-height: 1;
   color: #fff;
   text-align: center;
+  white-space: nowrap;
+  /* 必要時縮放, 唔遮邊 */
+  max-width: 100%;
+  overflow: visible;
 }
 .fold-countdown .big-time.warning { color: #fbbf24; }
 .fold-countdown .big-time.danger {
@@ -481,6 +494,29 @@ button:active { transform: scale(0.98); }
   font-size: 16px;
   opacity: 0.7;
   margin-top: 20px;
+}
+
+/* v0.3.1: 響鬧 inline 結束按鈕 */
+.alarm-inline-btn {
+  margin-top: 16px;
+  padding: 12px 32px;
+  font-size: 20px;
+  font-weight: 600;
+  background: rgba(220, 38, 38, 0.95);
+  color: #fff;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  border-radius: 8px;
+  cursor: pointer;
+  pointer-events: auto;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  transition: transform 0.1s, background 0.1s;
+}
+.alarm-inline-btn:hover {
+  background: rgba(185, 28, 28, 1);
+  transform: scale(1.05);
+}
+.alarm-inline-btn:active {
+  transform: scale(0.98);
 }
 
 /* ==================== 列印 ==================== */

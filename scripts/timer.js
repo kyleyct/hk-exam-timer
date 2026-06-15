@@ -137,7 +137,9 @@
   }
 
   function nowEpoch() {
-    return Date.now() - state.pausedTotal + (state.isPaused ? (Date.now() - state.pausedAt) : 0);
+    // v0.3.1 fix: paused 期間 nowEpoch 凍結
+    // 公式: Date.now() - 所有已 commit 嘅 pause 時間 - 當下未結束嘅 pause 區間
+    return Date.now() - state.pausedTotal - (state.isPaused ? (Date.now() - state.pausedAt) : 0);
   }
 
   function remainingSec() {
@@ -246,23 +248,31 @@
 
     let startDate, endDate;
     const today = new Date();
-    if (startStr && endStr) {
-      const [sh, sm] = startStr.split(':').map(Number);
-      const [eh, em] = endStr.split(':').map(Number);
-      startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), sh, sm, 0);
-      endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), eh, em, 0);
-      if (endDate <= startDate) endDate.setDate(endDate.getDate() + 1);
-    } else if (startStr && durationStr) {
-      const [sh, sm] = startStr.split(':').map(Number);
+    // v0.3.1: priority 改為 duration > end-time > start-only error
+    // (老版本用 start+end > start+duration, 但用戶 intuition 係
+    // 「我 set 1 小時, 應該顯示 1 小時」)
+    if (!startStr) {
+      alert(t('label.start_time'));
+      return;
+    }
+    const [sh, sm] = startStr.split(':').map(Number);
+    startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), sh, sm, 0);
+
+    if (durationStr) {
       const dur = parseInt(durationStr, 10);
       if (!dur || dur < 1) {
         alert(t('placeholder.duration'));
         return;
       }
-      startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), sh, sm, 0);
+      // duration mode: end = start + dur
       endDate = new Date(startDate.getTime() + dur * 60 * 1000);
+    } else if (endStr) {
+      // end-time fallback: end = end-of-day's endStr
+      const [eh, em] = endStr.split(':').map(Number);
+      endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), eh, em, 0);
+      if (endDate <= startDate) endDate.setDate(endDate.getDate() + 1);
     } else {
-      alert(t('label.start_time'));
+      alert(t('placeholder.duration'));
       return;
     }
 
@@ -373,6 +383,11 @@
     bind('test-alarm-btn', 'click', () => {
       ensureAudio();
       playTestBeep();
+    });
+
+    // v0.3.1: 響鬧時 inline 結束按鈕 (alarm 內, fold window 之外)
+    bind('alarm-end-btn', 'click', () => {
+      if (confirm(t('button.end') + '?')) endExam();
     });
 
     bind('notice-size', 'input', (e) => {

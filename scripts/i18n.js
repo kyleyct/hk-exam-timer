@@ -72,6 +72,24 @@
   /** 掃描 DOM,apply 所有 data-i18n-* attribute */
   function applyAll() {
     document.querySelectorAll('[data-i18n]').forEach(el => {
+      // v0.3.1 fix: skip 任何有 form-control children (input/textarea/select)
+      // 嘅 element — 之前用 textContent = 會清空所有 children, 包括 input,
+      // 導致 #start-time / #end-time / #duration / #notice / #notice-size
+      // 全部消失, 之後 timer.js bind() 返 null 然後 crash。
+      if (el.querySelector('input, textarea, select')) {
+        // 只更新第一個 text node (即 label 自己嘅文字), 保留後面嘅 input
+        const key = el.getAttribute('data-i18n');
+        const translated = t(key);
+        // 將翻譯文字放喺 element 最前 (text node 在前, input 在後)
+        // 用 firstChild.nodeValue 直接改 text, 唔觸碰其他 children
+        if (el.firstChild && el.firstChild.nodeType === Node.TEXT_NODE) {
+          el.firstChild.nodeValue = translated;
+        } else {
+          // 冇 text node 在前, prepend 一個
+          el.insertBefore(document.createTextNode(translated), el.firstChild);
+        }
+        return;
+      }
       el.textContent = t(el.getAttribute('data-i18n'));
     });
     document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {

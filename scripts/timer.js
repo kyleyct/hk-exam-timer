@@ -242,9 +242,12 @@
     const subject = $('subject').value.trim();
     const paper = $('paper').value.trim();
     const startStr = $('start-time').value;
-    const endStr = $('end-time').value;
+    // v0.3.2 rev 13: end-time element 喺 setup 改版後被移除, 預設空字串
+    const endEl = $('end-time');
+    const endStr = endEl ? endEl.value : '';
     const durationStr = $('duration').value;
-    const notice = $('notice').value.trim();
+    const noticeEl = $('notice');
+    const notice = noticeEl ? noticeEl.value.trim() : '';
 
     let startDate, endDate;
     const today = new Date();

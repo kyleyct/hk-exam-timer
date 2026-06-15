@@ -30,16 +30,36 @@
     'controls': { x: 'center-x', y: 'controls-y', w: '100vw', h: 70, minimized: false },
   };
 
+  // v0.3.2: 為咗避免舊版 layout 將 countdown 飛去左上角 (y:'tl' + translateX(-50%))
+  // 強制清除可能殘留嘅 'tl' anchor, 將 countdown / notice / controls 還原去佢哋嘅 anchor.
+  function sanitizeLayout(saved) {
+    const out = {};
+    for (const k of Object.keys(DEFAULT_LAYOUT)) {
+      const def = DEFAULT_LAYOUT[k];
+      const s = saved[k] || {};
+      // 清走 'tl' 殘留, 保留 user 嘅 offset (_x, _y)
+      let x = s.x, y = s.y;
+      if (k === 'countdown') y = 'center-y';
+      else if (k === 'notice') y = 'notice-y';
+      else if (k === 'controls') y = 'controls-y';
+      else if (k === 'info' && (s.y === 'center-y' || s.y === 'notice-y' || s.y === 'controls-y')) y = 16;
+      out[k] = {
+        x: x === 'tl' ? def.x : (x || def.x),
+        y: y,
+        w: s.w || def.w,
+        h: s.h || def.h,
+        minimized: !!s.minimized,
+      };
+    }
+    return out;
+  }
+
   let layout = loadLayout();
 
   function loadLayout() {
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
-      const result = {};
-      for (const k of Object.keys(DEFAULT_LAYOUT)) {
-        result[k] = { ...DEFAULT_LAYOUT[k], ...(saved[k] || {}) };
-      }
-      return result;
+      return sanitizeLayout(saved);
     } catch {
       return JSON.parse(JSON.stringify(DEFAULT_LAYOUT));
     }

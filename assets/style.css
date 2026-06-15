@@ -360,24 +360,27 @@ button:active { transform: scale(0.98); }
   /* 留 padding 防字緊貼邊 */
 }
 .fold-countdown .big-time {
-  /* v0.3.2: 用 cqi 跟 container 寬度, 加 overflow 防字超出
-   *   - 字體 scale: 14% container width, min 32px, max 200px
-   *   - white-space: nowrap 防止 1:45:00 斷行變 "1:45" + "00"
-   *   - overflow: hidden 確保唔會 overflow 到 fold window 外面
-   *   - text-align: center 居中對齊
+  /* v0.3.2 rev 9: 用 cqi 跟 container 寬度, text-align center 居中
+   *   - 字體 scale: 12% container width, min 32px, max 160px
+   *   - letter-spacing 收緊至 0.02em 騰出空間
+   *   - white-space: nowrap 防止 "1:45:00" 斷行
+   *   - text-align: center 確保字居中
+   *   - overflow: hidden 處理極端情況
    */
-  font-size: clamp(32px, 14cqi, 200px);
+  font-size: clamp(32px, 12cqi, 160px);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   font-family: "SF Mono", Menlo, "Courier New", monospace;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.02em;
   line-height: 1;
   color: #fff;
   text-align: center;
   white-space: nowrap;
   overflow: hidden;
   max-width: 100%;
-  /* 用縮放保險: 真正太大就自動縮細 (e.g. 32px 起步) */
+  margin: 0 auto;
+  /* 留 padding 防止字貼邊 */
+  padding: 0 8px;
 }
 .fold-countdown .big-time.warning { color: #fbbf24; }
 .fold-countdown .big-time.danger {

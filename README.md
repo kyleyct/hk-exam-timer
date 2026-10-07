@@ -5,6 +5,20 @@
 [![授權: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![為香港教師而設](https://img.shields.io/badge/Made%20for-HK%20Teachers-orange.svg)](#)
 
+**🔗 Live Demo：<https://kyleyct.github.io/hk-exam-timer/>**
+
+![考試進行中畫面 / Exam in progress](docs/screenshot-live.png)
+
+| 設定畫面 / Setup | 手機版 / Mobile |
+|---|---|
+| <img src="docs/screenshot-setup.png" alt="設定畫面 / Setup screen" width="520"> | <img src="docs/screenshot-mobile.png" alt="手機版 / Mobile view" width="200"> |
+
+## English
+
+**School Exam Timer** is a browser-based exam timer built for Hong Kong teachers to project in exam rooms. Enter the subject, paper, start time and duration, press *Start Exam*, and it shows a large countdown, the exam time slot and live notices (e.g. question corrections), then sounds an alarm when time is up.
+
+It runs entirely in the browser — no login, no server, no data uploaded — and works offline: just open `index.html`. The interface is available in Traditional Chinese and English, and timing stays accurate even if the tab is hidden or the computer sleeps.
+
 ## 一句話總結
 
 考試時開啟瀏覽器，自動倒數、自動響鬧、可顯示試場公告（題目更改等），純前端、零依賴、可離線運作。
@@ -16,7 +30,7 @@
 3. 輸入科目、卷別、開考時間、考試時長
 4. 按「開始考試」→ 自動進入全螢幕模式
 
-或前往 [GitHub Pages 示範](https://kyleyct.github.io/hk-exam-timer/) 使用線上版本（如已啟用）。
+或前往 [GitHub Pages 示範](https://kyleyct.github.io/hk-exam-timer/) 使用線上版本。
 
 ## 設計理念
 
@@ -66,6 +80,15 @@
 - **音量**：使用 Web Audio gain 控制，於用戶手勢後啟動（避免自動播放限制）
 - **試響按鈕**：設定畫面提供「🔊 試響」按鈕，方便考試日前確認聲響正常
 
+## 技術 Tech stack
+
+- **原生 HTML / CSS / JavaScript**（vanilla JS）— 無框架、無建置步驟 / no framework, no build step
+- **[interact.js](https://interactjs.io/)**（已內置於 `assets/vendor/`）— 考試畫面視窗拖曳及縮放 / draggable & resizable exam windows
+- **Web Audio API** — 響鬧音（振盪器），系統靜音時仍可聽到 / alarm tone via oscillator
+- **Fullscreen API**、`visibilitychange` + `Date.now()` — 全螢幕投影及準確計時 / projector fullscreen & drift-free timing
+- **自製 i18n**（JSON 字典：`assets/i18n/zh-HK.json`、`en.json`）/ lightweight custom i18n
+- **GitHub Pages** — 靜態託管 / static hosting
+
 ## 私隱
 
 - 純前端，**無任何資料上傳**
@@ -80,18 +103,24 @@
 ### 檔案結構
 
 ```
-w2-exam-timer/
+hk-exam-timer/
 ├── index.html
 ├── assets/
 │   ├── style.css
+│   ├── vendor/
+│   │   └── interact.min.js # 視窗拖曳 / 縮放
 │   └── i18n/
 │       ├── zh-HK.json     # 繁體中文 (預設)
 │       └── en.json        # 英文
+├── docs/                  # README 截圖
 └── scripts/
     ├── i18n.js            # 國際化框架
     ├── combobox.js        # 搜尋式選單組件
+    ├── fold-windows.js    # 考試畫面視窗版面
     └── timer.js           # 計時器核心邏輯
 ```
+
+除錯記錄預設關閉；如需於 console 查看計時器記錄，可於網址加上 `?debug=1`。
 
 ### 多語言
 
@@ -176,9 +205,6 @@ const DEFAULT_LAYOUT = {
 
 MIT
 
-## 致謝
+## 作者 Author
 
-本工具為「**8 週 AI × 教育**」公開專案計劃的第二個工具。
-
-- 其他工具：[W1 全港學校列表](#) / [8 週總集](#)
-- 由 [Kyle Yeung](https://github.com/kyleyct) 製作 · 2026
+© [Kyle Yeung](https://github.com/kyleyct)

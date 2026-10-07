@@ -19,6 +19,10 @@
 (function () {
   'use strict';
 
+  // Debug logging: off by default; enable with ?debug=1 in the URL
+  const DEBUG = /[?&]debug=1(&|$)/.test(location.search);
+  const debugLog = (...args) => { if (DEBUG) console.log(...args); };
+
   const $ = (id) => document.getElementById(id);
   const setup = $('setup');
   const live = $('live');
@@ -68,7 +72,7 @@
     if (state.alarmLoopId) return;
     const ctx = ensureAudio();
     if (!ctx) return;
-    console.log('[timer] alarm loop started at', new Date().toISOString());
+    debugLog('[timer] alarm loop started at', new Date().toISOString());
 
     function beep(startAt, duration) {
       const osc = ctx.createOscillator();
@@ -104,7 +108,7 @@
   function playTestBeep() {
     const ctx = ensureAudio();
     if (!ctx) return;
-    console.log('[timer] test beep at', new Date().toISOString());
+    debugLog('[timer] test beep at', new Date().toISOString());
     const now = ctx.currentTime;
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
@@ -187,7 +191,7 @@
     state.alarmPlayed = true;
     if (state.rafId) cancelAnimationFrame(state.rafId);
 
-    console.log('[timer] alarm triggered at', new Date().toISOString(), 'endEpoch=', state.endEpoch);
+    debugLog('[timer] alarm triggered at', new Date().toISOString(), 'endEpoch=', state.endEpoch);
 
     $('alarm-subject').textContent = state.subject || '—';
     if (state.paper) {
@@ -226,10 +230,10 @@
   function scheduleAlarm() {
     if (state.alarmTimeoutId) clearTimeout(state.alarmTimeoutId);
     const ms = state.endEpoch - nowEpoch();
-    console.log('[timer] schedule alarm in', ms, 'ms');
+    debugLog('[timer] schedule alarm in', ms, 'ms');
     if (ms > 0) {
       state.alarmTimeoutId = setTimeout(() => {
-        console.log('[timer] alarm timeout fired');
+        debugLog('[timer] alarm timeout fired');
         triggerAlarm();
       }, ms);
     } else {
@@ -355,7 +359,7 @@
 
     noticeEl.addEventListener('blur', () => {
       state.notice = noticeEl.textContent.trim();
-      console.log('[timer] notice updated:', state.notice);
+      debugLog('[timer] notice updated:', state.notice);
     });
   }
 
@@ -446,7 +450,7 @@
     catch (err) { console.error('[timer] initNoticeEditor failed:', err); }
 
     if (location.search.includes('test=alarm5')) {
-      console.log('[timer] test=alarm5 mode — alarm in 5s');
+      debugLog('[timer] test=alarm5 mode — alarm in 5s');
       setTimeout(() => {
         try {
           state.endEpoch = Date.now() + 1000;

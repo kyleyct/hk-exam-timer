@@ -3,22 +3,18 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>校園考試計時器</title>
+<title>科目 / 年級</title>
 <link rel="icon" href="data:," />
 <style>
   :root {
-    --navy: #071428;
-    --navy-deep: #050d18;
-    --navy-mid: #10243f;
-    --gold: #d4af37;
-    --gold-bright: #f0d78c;
-    --gold-dim: #a68524;
-    --cream: #f6f0de;
-    --muted: #cbb98a;
-    /* Functional states only — not page chrome */
-    --last-minute: #ffbf3c;
-    --last-seconds: #ff4b6e;
-    --time-up: #c81e45;
+    --paper: #f7fbfb;
+    --ink: #121417;
+    --teal: #0d9488;
+    --teal-deep: #0f766e;
+    --accent: #ff2d7b;
+    --amber: #f59e0b;
+    --red: #dc2626;
+    --muted: #5c6766;
   }
 
   * { box-sizing: border-box; }
@@ -30,26 +26,20 @@
     height: 100%;
     overflow: hidden;
     font-family: "Noto Sans CJK TC", "PingFang HK", "Microsoft JhengHei", "Heiti TC", "Noto Sans TC", system-ui, sans-serif;
-    color: var(--cream);
-    background: var(--navy-deep);
+    color: var(--ink);
+    background: var(--paper);
   }
 
   .stage {
     position: fixed;
     inset: 0;
-    background-color: var(--navy);
-    background-image:
-      radial-gradient(ellipse at 50% 0%, rgba(212, 175, 55, 0.18), transparent 56%),
-      linear-gradient(180deg, #16325c 0%, var(--navy) 46%, var(--navy-deep) 100%);
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
+    background: var(--paper);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     gap: 3vh;
-    padding: 4vh 4vw 3vh;
+    padding: 5vh 4vw 56px 56px;
   }
 
   body:not(.projector-mode) .stage {
@@ -59,18 +49,31 @@
   .topbar {
     position: relative;
     z-index: 2;
-    width: 100%;
+    width: min(920px, 100%);
     text-align: center;
   }
 
-  .title {
-    display: inline-block;
-    padding: 0.6vh 2.2vw;
-    font-size: clamp(22px, 3vw, 48px);
+  .subject-input {
+    width: 100%;
+    text-align: center;
+    font: inherit;
+    font-size: clamp(32px, 4.4vw, 64px);
     font-weight: 800;
-    letter-spacing: 0.06em;
-    color: var(--gold-bright);
-    text-shadow: 0 2px 16px rgba(0, 0, 0, 0.45);
+    letter-spacing: 0.04em;
+    color: var(--ink);
+    background: transparent;
+    border: none;
+    border-bottom: 4px solid transparent;
+    border-radius: 0;
+    padding: 0.15em 0.2em 0.2em;
+  }
+  .subject-input:focus {
+    outline: none;
+    border-bottom-color: var(--accent);
+  }
+  .subject-input::placeholder {
+    color: #8b9493;
+    font-weight: 800;
   }
 
   .clock-wrap {
@@ -79,37 +82,33 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 1.6vh;
+    gap: 1.4vh;
     margin-top: 0;
-    background:
-      linear-gradient(180deg, rgba(20, 40, 72, 0.94), rgba(7, 16, 32, 0.96));
-    border: 3px solid var(--gold);
-    border-radius: 24px;
-    padding: 3.2vh 4vw;
-    box-shadow:
-      0 0 0 1px rgba(240, 215, 140, 0.35),
-      inset 0 1px 0 rgba(255, 236, 190, 0.25),
-      0 24px 60px rgba(0, 0, 0, 0.45);
-    min-width: min(52vw, 760px);
+    background: #ffffff;
+    border: 5px solid var(--teal);
+    border-radius: 28px;
+    padding: 3vh 4vw 2.6vh;
+    box-shadow: 0 10px 0 var(--teal);
+    min-width: min(56vw, 820px);
   }
 
   .clock {
-    font-size: clamp(80px, 13vw, 220px);
+    font-size: clamp(108px, 16vw, 280px);
     font-weight: 900;
-    line-height: 1;
-    color: var(--cream);
+    line-height: 0.9;
+    color: var(--ink);
     font-variant-numeric: tabular-nums;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.03em;
     font-family: "SF Mono", "Menlo", "Consolas", monospace;
   }
 
-  .clock.warn { color: var(--last-minute); }
+  .clock.warn { color: var(--amber); }
   .clock.danger {
-    color: var(--last-seconds);
+    color: var(--red);
     animation: pulse 1s ease-in-out infinite;
   }
   .clock.done {
-    color: #ffe4ea;
+    color: var(--red);
     animation: flash 0.6s ease-in-out infinite;
   }
 
@@ -120,48 +119,63 @@
 
   @keyframes flash {
     0%, 100% { opacity: 1; }
-    50% { opacity: 0.45; }
+    50% { opacity: 0.35; }
   }
 
   .period {
-    font-size: clamp(18px, 2.4vw, 36px);
-    font-weight: 700;
-    color: var(--gold-bright);
+    font-size: clamp(20px, 2.6vw, 40px);
+    font-weight: 800;
+    color: var(--teal);
     letter-spacing: 0.06em;
+  }
+
+  .screen-tag {
+    position: fixed;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 6;
+    margin: 0;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.22em;
+    writing-mode: vertical-rl;
+    color: var(--accent);
   }
 
   .status-pill {
     position: absolute;
     top: 2vh;
-    left: 2vw;
+    left: 56px;
     z-index: 5;
-    padding: 0.6vh 1.4vw;
+    padding: 0.55vh 1.2vw;
     border-radius: 999px;
-    background: rgba(7, 20, 40, 0.9);
-    color: var(--gold-bright);
-    border: 1px solid rgba(212, 175, 55, 0.7);
+    background: #ffffff;
+    color: var(--ink);
+    border: 2px solid var(--teal);
     font-size: clamp(12px, 1.2vw, 18px);
-    font-weight: 700;
-    letter-spacing: 0.05em;
+    font-weight: 800;
+    letter-spacing: 0.04em;
   }
   .status-pill.live {
-    background: linear-gradient(180deg, var(--gold-bright), var(--gold));
-    color: #1a1404;
-    border-color: var(--gold-bright);
+    background: var(--teal);
+    color: #ffffff;
+    border-color: var(--teal);
   }
   .status-pill.paused {
-    background: rgba(7, 20, 40, 0.92);
-    color: var(--cream);
-    border-color: var(--gold);
+    background: #ffffff;
+    color: var(--ink);
+    border-color: var(--accent);
   }
   .status-pill.done {
-    background: var(--time-up);
-    color: #fff;
-    border-color: #ffd0dc;
+    background: var(--red);
+    color: #ffffff;
+    border-color: var(--red);
   }
   .status-pill.idle {
-    background: rgba(7, 20, 40, 0.9);
-    color: var(--gold-bright);
+    background: #ffffff;
+    color: var(--ink);
+    border-color: var(--teal);
   }
 
   .info-bar {
@@ -169,14 +183,14 @@
     z-index: 2;
     width: min(920px, 100%);
     text-align: center;
-    padding: 1.4vh 2vw;
-    background: rgba(6, 16, 32, 0.9);
-    color: var(--cream);
-    border: 1px solid rgba(212, 175, 55, 0.55);
-    border-radius: 12px;
+    padding: 1.2vh 2vw;
+    background: #ffffff;
+    color: var(--ink);
+    border: 3px solid var(--teal);
+    border-radius: 14px;
     font-size: clamp(18px, 2.2vw, 34px);
-    font-weight: 600;
-    letter-spacing: 0.06em;
+    font-weight: 700;
+    letter-spacing: 0.04em;
     min-height: 5vh;
     display: flex;
     align-items: center;
@@ -184,89 +198,83 @@
   }
 
   .info-bar.editing {
-    border-color: var(--gold-bright);
-    outline: 3px dashed rgba(240, 215, 140, 0.7);
+    border-color: var(--accent);
+    outline: 3px dashed var(--accent);
     outline-offset: -8px;
   }
 
   .info-input {
     background: transparent;
     border: none;
-    color: var(--cream);
+    color: var(--ink);
     text-align: center;
     width: 100%;
     font: inherit;
     outline: none;
   }
-  .info-input::placeholder { color: rgba(246, 240, 222, 0.55); }
+  .info-input::placeholder { color: #8b9493; }
 
   .panel {
     position: fixed;
-    top: 20px;
-    right: 20px;
+    top: 16px;
+    right: 16px;
     z-index: 100;
-    width: 360px;
-    max-height: calc(100vh - 40px);
+    width: 340px;
+    max-height: calc(100vh - 64px);
     overflow-y: auto;
-    background: rgba(8, 20, 38, 0.94);
-    color: var(--cream);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(212, 175, 55, 0.5);
+    background: #ffffff;
+    color: var(--ink);
+    border: 3px solid var(--teal);
     border-radius: 16px;
-    padding: 18px 18px 16px;
-    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+    padding: 14px 14px 12px;
+    box-shadow: 6px 6px 0 var(--accent);
     transition: transform 0.3s, opacity 0.3s;
   }
   .panel.collapsed {
-    transform: translateX(calc(100% + 20px));
+    transform: translateX(calc(100% + 24px));
     opacity: 0;
     pointer-events: none;
   }
   .panel-head {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
     gap: 8px;
-  }
-  .panel h2 {
-    margin: 0 0 4px 0;
-    font-size: 18px;
-    color: var(--gold-bright);
+    margin-bottom: 12px;
   }
   .panel .sub {
-    font-size: 12px;
-    color: var(--muted);
-    margin-bottom: 14px;
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--teal-deep);
+    margin: 0;
   }
   .lang-btn {
     flex: 0 0 auto;
     padding: 6px 10px;
     border-radius: 999px;
-    border: 1px solid var(--gold);
-    background: transparent;
-    color: var(--gold-bright);
+    border: 2px solid var(--accent);
+    background: #ffffff;
+    color: var(--accent);
     font: inherit;
     font-size: 12px;
-    font-weight: 700;
+    font-weight: 800;
     cursor: pointer;
   }
-  .lang-btn:hover { background: rgba(212, 175, 55, 0.15); }
+  .lang-btn:hover { background: #fff0f6; }
 
   .panel-toggle {
     position: fixed;
-    top: 20px;
-    right: 20px;
+    top: 16px;
+    right: 16px;
     z-index: 101;
     width: 44px;
     height: 44px;
     border-radius: 50%;
-    background: var(--navy-mid);
-    border: 1px solid var(--gold);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    background: #ffffff;
+    border: 3px solid var(--teal);
     cursor: pointer;
     font-size: 20px;
-    color: var(--gold-bright);
+    color: var(--teal);
     display: none;
   }
   .panel-toggle.visible { display: flex; align-items: center; justify-content: center; }
@@ -275,8 +283,8 @@
   .field label {
     display: block;
     font-size: 12px;
-    font-weight: 700;
-    color: var(--gold-bright);
+    font-weight: 800;
+    color: var(--teal-deep);
     margin-bottom: 4px;
     letter-spacing: 0.04em;
   }
@@ -284,17 +292,17 @@
   .field input[type="text"] {
     width: 100%;
     padding: 8px 10px;
-    border: 1px solid rgba(212, 175, 55, 0.45);
+    border: 2px solid var(--teal);
     border-radius: 8px;
     font: inherit;
     font-size: 14px;
-    color: #1a1404;
-    background: #f7f1de;
+    color: var(--ink);
+    background: #ffffff;
   }
   .field input[type="file"] {
     font-size: 12px;
     width: 100%;
-    color: var(--cream);
+    color: var(--ink);
   }
 
   .row { display: flex; gap: 8px; }
@@ -303,29 +311,32 @@
   .btn {
     width: 100%;
     padding: 10px 12px;
-    border: 1px solid transparent;
+    border: 2px solid var(--teal);
     border-radius: 10px;
     font: inherit;
     font-size: 14px;
-    font-weight: 700;
+    font-weight: 800;
     cursor: pointer;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.03em;
+    background: #ffffff;
+    color: var(--ink);
   }
-  .btn:hover { filter: brightness(1.06); }
+  .btn:hover { filter: brightness(0.98); }
   .btn-primary {
-    background: linear-gradient(180deg, #f3e0a4 0%, #d4af37 48%, #a68524 100%);
-    color: #1a1404;
-    border-color: #f0d78c;
+    background: var(--teal);
+    color: #ffffff;
+    border-color: var(--teal);
   }
+  .btn-primary:hover { background: var(--teal-deep); border-color: var(--teal-deep); }
   .btn-secondary {
-    background: #13243f;
-    color: var(--cream);
-    border-color: rgba(212, 175, 55, 0.55);
+    background: #ffffff;
+    color: var(--ink);
+    border-color: var(--teal);
   }
   .btn-ghost {
-    background: transparent;
-    color: var(--gold-bright);
-    border-color: rgba(212, 175, 55, 0.55);
+    background: #ffffff;
+    color: var(--teal-deep);
+    border-color: var(--teal);
   }
 
   .btn-group {
@@ -337,52 +348,74 @@
 
   .hint {
     font-size: 11px;
-    color: #e6d7b0;
+    color: var(--ink);
     line-height: 1.5;
-    background: rgba(212, 175, 55, 0.08);
-    border-left: 3px solid var(--gold);
+    background: #e7f7f5;
+    border-left: 4px solid var(--teal);
     padding: 8px 10px;
     border-radius: 4px;
     margin-top: 10px;
   }
 
   .divider {
-    height: 1px;
-    background: rgba(212, 175, 55, 0.28);
-    margin: 14px 0;
+    height: 2px;
+    background: #d5eeeb;
+    margin: 12px 0;
   }
 
   .kbd {
-    background: #13243f;
-    border: 1px solid rgba(212, 175, 55, 0.45);
+    background: #ffffff;
+    border: 2px solid var(--teal);
     border-radius: 4px;
     padding: 1px 6px;
     font-size: 11px;
     font-family: monospace;
-    color: var(--gold-bright);
+    color: var(--ink);
   }
 
   body.projector-mode .panel,
   body.projector-mode .panel-toggle { display: none; }
   body.projector-mode .status-pill { display: none; }
 
+  .page-foot {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 140;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    padding: 6px 12px 8px;
+    background: var(--paper);
+    color: var(--ink);
+    font-size: 12px;
+    line-height: 1.3;
+  }
+  .page-foot a {
+    color: var(--teal-deep);
+    font-weight: 800;
+  }
+  body.projector-mode .page-foot { display: flex; }
+
   .alert {
     position: fixed;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    background: var(--time-up);
-    color: #fff;
+    background: var(--red);
+    color: #ffffff;
     padding: 4vh 6vw;
     border-radius: 24px;
     font-size: clamp(40px, 6vw, 96px);
     font-weight: 900;
     z-index: 200;
-    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45);
+    box-shadow: 0 16px 0 #7f1d1d;
     display: none;
     text-align: center;
     letter-spacing: 0.08em;
-    border: 2px solid #ffd0dc;
   }
   .alert.visible { display: block; }
 </style>
@@ -393,8 +426,16 @@
   <div class="status-pill idle" id="statusPill">未開始</div>
 
   <div class="topbar">
-    <div class="title" id="titleText">校園考試計時器</div>
+    <input
+      class="subject-input"
+      id="subjectInput"
+      type="text"
+      placeholder="科目 / 年級"
+      aria-label="科目 / 年級"
+      autocomplete="off"
+    />
   </div>
+  <div class="screen-tag" id="screenTag">計時器</div>
 
   <div class="clock-wrap">
     <div class="clock" id="clock">60:00</div>
@@ -406,7 +447,7 @@
       class="info-input"
       id="infoInput"
       type="text"
-      placeholder="（可輸入年級、試場資訊等，按 Enter 確認，雙擊可再改）"
+      placeholder="試場備註（按 Enter 確認，雙擊可再改）"
       autocomplete="off"
     />
   </div>
@@ -418,20 +459,14 @@
 
 <div class="panel" id="panel">
   <div class="panel-head">
-    <h2 id="panelTitle">校園考試計時器</h2>
+    <div class="sub" id="panelSub">試場投影</div>
     <button class="lang-btn" id="btnLang" type="button">English</button>
   </div>
-  <div class="sub" id="panelSub">試場投影</div>
 
   <div class="field">
     <label id="labelBg">背景圖片</label>
     <input type="file" id="bgInput" accept="image/*" />
     <div class="hint" id="hintBg">預設純色背景。如要更換，揀新圖覆蓋即可（只喺瀏覽器內顯示，唔會上傳）。</div>
-  </div>
-
-  <div class="field">
-    <label id="labelTitle">標題文字</label>
-    <input type="text" id="titleInput" value="校園考試計時器" autocomplete="off" />
   </div>
 
   <div class="row">
@@ -480,6 +515,11 @@
   </div>
 </div>
 
+<footer class="page-foot" id="pageFoot">
+  <a id="repoLink" href="https://github.com/kyleyct/hk-exam-timer">github.com/kyleyct/hk-exam-timer</a>
+  <span id="credit">創作者：Kyle Yeung</span>
+</footer>
+
 <script>
 (function () {
   'use strict';
@@ -487,18 +527,18 @@
   var LANG_KEY = 'hk-exam-timer-lang';
   var STR = {
     'zh-HK': {
-      docTitle: '校園考試計時器',
-      title: '校園考試計時器',
-      panelTitle: '校園考試計時器',
+      docTitle: '科目 / 年級',
+      subjectPh: '科目 / 年級',
+      screenTag: '計時器',
+      credit: '創作者：Kyle Yeung',
       sub: '試場投影',
       statusIdle: '未開始',
       statusLive: '進行中',
       statusPaused: '已暫停',
       statusDone: '時間到',
-      infoPh: '（可輸入年級、試場資訊等，按 Enter 確認，雙擊可再改）',
+      infoPh: '試場備註（按 Enter 確認，雙擊可再改）',
       bg: '背景圖片',
       bgHint: '預設純色背景。如要更換，揀新圖覆蓋即可（只喺瀏覽器內顯示，唔會上傳）。',
-      titleLabel: '標題文字',
       start: '開始時間',
       end: '結束時間',
       warn: '提示時間（秒）',
@@ -518,18 +558,18 @@
       panelToggle: '開啟控制台'
     },
     en: {
-      docTitle: 'School Exam Timer',
-      title: 'School Exam Timer',
-      panelTitle: 'School Exam Timer',
+      docTitle: 'Subject / level',
+      subjectPh: 'Subject / level',
+      screenTag: 'Timer',
+      credit: 'Developed by Kyle Yeung',
       sub: 'Exam-room projection',
       statusIdle: 'Not started',
       statusLive: 'In progress',
       statusPaused: 'Paused',
       statusDone: 'Time up',
-      infoPh: '(Year group or room notes. Enter to confirm, double-click to edit again)',
+      infoPh: 'Room note (Enter to confirm, double-click to edit again)',
       bg: 'Background image',
       bgHint: 'Solid colour by default. Choose an image to replace it (shown only in this browser, never uploaded).',
-      titleLabel: 'Title',
       start: 'Start time',
       end: 'End time',
       warn: 'Warning times (seconds)',
@@ -556,12 +596,13 @@
   var statusPill = document.getElementById('statusPill');
   var infoBar = document.getElementById('infoBar');
   var infoInput = document.getElementById('infoInput');
-  var titleEl = document.getElementById('titleText');
+  var subjectInput = document.getElementById('subjectInput');
+  var screenTag = document.getElementById('screenTag');
+  var creditEl = document.getElementById('credit');
   var alertBox = document.getElementById('alertBox');
   var panel = document.getElementById('panel');
   var panelToggle = document.getElementById('panelToggle');
   var bgInput = document.getElementById('bgInput');
-  var titleInput = document.getElementById('titleInput');
   var startInput = document.getElementById('startTime');
   var endInput = document.getElementById('endTime');
   var warnInput = document.getElementById('warnSeconds');
@@ -593,25 +634,19 @@
 
   function t() { return STR[state.lang]; }
 
-  function defaultTitles() {
-    return [STR['zh-HK'].title, STR.en.title];
-  }
-
   function applyLang(lang) {
     if (!STR[lang]) lang = 'zh-HK';
     state.lang = lang;
     var s = STR[lang];
     document.documentElement.lang = lang === 'en' ? 'en' : 'zh-HK';
-    document.title = s.docTitle;
-    if (defaultTitles().indexOf(titleInput.value) !== -1 || !titleInput.value) {
-      titleInput.value = s.title;
-      titleEl.textContent = s.title;
-    }
-    document.getElementById('panelTitle').textContent = s.panelTitle;
+    subjectInput.placeholder = s.subjectPh;
+    subjectInput.setAttribute('aria-label', s.subjectPh);
+    screenTag.textContent = s.screenTag;
+    creditEl.textContent = s.credit;
+    document.title = subjectInput.value.trim() || s.subjectPh;
     document.getElementById('panelSub').textContent = s.sub;
     document.getElementById('labelBg').textContent = s.bg;
     document.getElementById('hintBg').textContent = s.bgHint;
-    document.getElementById('labelTitle').textContent = s.titleLabel;
     document.getElementById('labelStart').textContent = s.start;
     document.getElementById('labelEnd').textContent = s.end;
     document.getElementById('labelWarn').textContent = s.warn;
@@ -651,8 +686,8 @@
     stage.style.backgroundSize = 'cover';
   });
 
-  titleInput.addEventListener('input', function () {
-    titleEl.textContent = titleInput.value || '';
+  subjectInput.addEventListener('input', function () {
+    document.title = subjectInput.value.trim() || t().subjectPh;
   });
 
   function commitInfo() { infoBar.classList.remove('editing'); }

@@ -1,175 +1,982 @@
 <!DOCTYPE html>
 <html lang="zh-HK">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>校園考試計時器</title>
-  <meta name="description" content="為香港教師設計的考試計時器：剩餘時間、考試時段、科目、卷別、公告，純前端、可離線使用。" />
-  <link rel="stylesheet" href="assets/style.css" />
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>校園考試計時器</title>
+<link rel="icon" href="data:," />
+<style>
+  :root {
+    --navy: #071428;
+    --navy-deep: #050d18;
+    --navy-mid: #10243f;
+    --gold: #d4af37;
+    --gold-bright: #f0d78c;
+    --gold-dim: #a68524;
+    --cream: #f6f0de;
+    --muted: #cbb98a;
+    /* Functional states only — not page chrome */
+    --last-minute: #ffbf3c;
+    --last-seconds: #ff4b6e;
+    --time-up: #c81e45;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    font-family: "Noto Sans CJK TC", "PingFang HK", "Microsoft JhengHei", "Heiti TC", "Noto Sans TC", system-ui, sans-serif;
+    color: var(--cream);
+    background: var(--navy-deep);
+  }
+
+  .stage {
+    position: fixed;
+    inset: 0;
+    background-color: var(--navy);
+    background-image:
+      radial-gradient(ellipse at 50% 0%, rgba(212, 175, 55, 0.18), transparent 56%),
+      linear-gradient(180deg, #16325c 0%, var(--navy) 46%, var(--navy-deep) 100%);
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3vh;
+    padding: 4vh 4vw 3vh;
+  }
+
+  body:not(.projector-mode) .stage {
+    padding-right: min(400px, 34vw);
+  }
+
+  .topbar {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+    text-align: center;
+  }
+
+  .title {
+    display: inline-block;
+    padding: 0.6vh 2.2vw;
+    font-size: clamp(22px, 3vw, 48px);
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    color: var(--gold-bright);
+    text-shadow: 0 2px 16px rgba(0, 0, 0, 0.45);
+  }
+
+  .clock-wrap {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.6vh;
+    margin-top: 0;
+    background:
+      linear-gradient(180deg, rgba(20, 40, 72, 0.94), rgba(7, 16, 32, 0.96));
+    border: 3px solid var(--gold);
+    border-radius: 24px;
+    padding: 3.2vh 4vw;
+    box-shadow:
+      0 0 0 1px rgba(240, 215, 140, 0.35),
+      inset 0 1px 0 rgba(255, 236, 190, 0.25),
+      0 24px 60px rgba(0, 0, 0, 0.45);
+    min-width: min(52vw, 760px);
+  }
+
+  .clock {
+    font-size: clamp(80px, 13vw, 220px);
+    font-weight: 900;
+    line-height: 1;
+    color: var(--cream);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.04em;
+    font-family: "SF Mono", "Menlo", "Consolas", monospace;
+  }
+
+  .clock.warn { color: var(--last-minute); }
+  .clock.danger {
+    color: var(--last-seconds);
+    animation: pulse 1s ease-in-out infinite;
+  }
+  .clock.done {
+    color: #ffe4ea;
+    animation: flash 0.6s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.04); }
+  }
+
+  @keyframes flash {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.45; }
+  }
+
+  .period {
+    font-size: clamp(18px, 2.4vw, 36px);
+    font-weight: 700;
+    color: var(--gold-bright);
+    letter-spacing: 0.06em;
+  }
+
+  .status-pill {
+    position: absolute;
+    top: 2vh;
+    left: 2vw;
+    z-index: 5;
+    padding: 0.6vh 1.4vw;
+    border-radius: 999px;
+    background: rgba(7, 20, 40, 0.9);
+    color: var(--gold-bright);
+    border: 1px solid rgba(212, 175, 55, 0.7);
+    font-size: clamp(12px, 1.2vw, 18px);
+    font-weight: 700;
+    letter-spacing: 0.05em;
+  }
+  .status-pill.live {
+    background: linear-gradient(180deg, var(--gold-bright), var(--gold));
+    color: #1a1404;
+    border-color: var(--gold-bright);
+  }
+  .status-pill.paused {
+    background: rgba(7, 20, 40, 0.92);
+    color: var(--cream);
+    border-color: var(--gold);
+  }
+  .status-pill.done {
+    background: var(--time-up);
+    color: #fff;
+    border-color: #ffd0dc;
+  }
+  .status-pill.idle {
+    background: rgba(7, 20, 40, 0.9);
+    color: var(--gold-bright);
+  }
+
+  .info-bar {
+    position: relative;
+    z-index: 2;
+    width: min(920px, 100%);
+    text-align: center;
+    padding: 1.4vh 2vw;
+    background: rgba(6, 16, 32, 0.9);
+    color: var(--cream);
+    border: 1px solid rgba(212, 175, 55, 0.55);
+    border-radius: 12px;
+    font-size: clamp(18px, 2.2vw, 34px);
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    min-height: 5vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .info-bar.editing {
+    border-color: var(--gold-bright);
+    outline: 3px dashed rgba(240, 215, 140, 0.7);
+    outline-offset: -8px;
+  }
+
+  .info-input {
+    background: transparent;
+    border: none;
+    color: var(--cream);
+    text-align: center;
+    width: 100%;
+    font: inherit;
+    outline: none;
+  }
+  .info-input::placeholder { color: rgba(246, 240, 222, 0.55); }
+
+  .panel {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 100;
+    width: 360px;
+    max-height: calc(100vh - 40px);
+    overflow-y: auto;
+    background: rgba(8, 20, 38, 0.94);
+    color: var(--cream);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(212, 175, 55, 0.5);
+    border-radius: 16px;
+    padding: 18px 18px 16px;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+    transition: transform 0.3s, opacity 0.3s;
+  }
+  .panel.collapsed {
+    transform: translateX(calc(100% + 20px));
+    opacity: 0;
+    pointer-events: none;
+  }
+  .panel-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .panel h2 {
+    margin: 0 0 4px 0;
+    font-size: 18px;
+    color: var(--gold-bright);
+  }
+  .panel .sub {
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 14px;
+  }
+  .lang-btn {
+    flex: 0 0 auto;
+    padding: 6px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--gold);
+    background: transparent;
+    color: var(--gold-bright);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .lang-btn:hover { background: rgba(212, 175, 55, 0.15); }
+
+  .panel-toggle {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 101;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--navy-mid);
+    border: 1px solid var(--gold);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    cursor: pointer;
+    font-size: 20px;
+    color: var(--gold-bright);
+    display: none;
+  }
+  .panel-toggle.visible { display: flex; align-items: center; justify-content: center; }
+
+  .field { margin-bottom: 12px; }
+  .field label {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--gold-bright);
+    margin-bottom: 4px;
+    letter-spacing: 0.04em;
+  }
+  .field input[type="time"],
+  .field input[type="text"] {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid rgba(212, 175, 55, 0.45);
+    border-radius: 8px;
+    font: inherit;
+    font-size: 14px;
+    color: #1a1404;
+    background: #f7f1de;
+  }
+  .field input[type="file"] {
+    font-size: 12px;
+    width: 100%;
+    color: var(--cream);
+  }
+
+  .row { display: flex; gap: 8px; }
+  .row > * { flex: 1; }
+
+  .btn {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 0.04em;
+  }
+  .btn:hover { filter: brightness(1.06); }
+  .btn-primary {
+    background: linear-gradient(180deg, #f3e0a4 0%, #d4af37 48%, #a68524 100%);
+    color: #1a1404;
+    border-color: #f0d78c;
+  }
+  .btn-secondary {
+    background: #13243f;
+    color: var(--cream);
+    border-color: rgba(212, 175, 55, 0.55);
+  }
+  .btn-ghost {
+    background: transparent;
+    color: var(--gold-bright);
+    border-color: rgba(212, 175, 55, 0.55);
+  }
+
+  .btn-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 4px;
+  }
+
+  .hint {
+    font-size: 11px;
+    color: #e6d7b0;
+    line-height: 1.5;
+    background: rgba(212, 175, 55, 0.08);
+    border-left: 3px solid var(--gold);
+    padding: 8px 10px;
+    border-radius: 4px;
+    margin-top: 10px;
+  }
+
+  .divider {
+    height: 1px;
+    background: rgba(212, 175, 55, 0.28);
+    margin: 14px 0;
+  }
+
+  .kbd {
+    background: #13243f;
+    border: 1px solid rgba(212, 175, 55, 0.45);
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-size: 11px;
+    font-family: monospace;
+    color: var(--gold-bright);
+  }
+
+  body.projector-mode .panel,
+  body.projector-mode .panel-toggle { display: none; }
+  body.projector-mode .status-pill { display: none; }
+
+  .alert {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: var(--time-up);
+    color: #fff;
+    padding: 4vh 6vw;
+    border-radius: 24px;
+    font-size: clamp(40px, 6vw, 96px);
+    font-weight: 900;
+    z-index: 200;
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45);
+    display: none;
+    text-align: center;
+    letter-spacing: 0.08em;
+    border: 2px solid #ffd0dc;
+  }
+  .alert.visible { display: block; }
+</style>
 </head>
 <body>
-  <!-- 設定畫面 -->
-  <section id="setup" class="screen setup">
-    <div class="container">
-      <header class="setup-header">
-        <div>
-          <h1 data-i18n="app.title">校園考試計時器</h1>
-          <p class="subtitle" data-i18n="app.subtitle">為香港教師而設 · 純前端 · 可離線使用</p>
-        </div>
-        <div class="lang-switcher">
-          <label data-i18n="label.language">語言</label>
-          <select id="lang-select">
-            <option value="zh-HK">繁體中文</option>
-            <option value="en">English</option>
-          </select>
-        </div>
-      </header>
 
-      <div class="card primary-section">
-        <h2 data-i18n="label.start_time">考試設定</h2>
-        <div class="row split">
-          <label data-i18n="label.subject">科目
-            <div class="combobox" data-name="subject">
-              <input type="text" id="subject" class="combobox-input"
-                     autocomplete="off" spellcheck="false"
-                     data-i18n-placeholder="placeholder.subject"
-                     placeholder="輸入或選擇科目" />
-              <ul class="combobox-list" id="subject-list" hidden></ul>
-            </div>
-          </label>
-          <label data-i18n="label.paper">卷別
-            <div class="combobox" data-name="paper">
-              <input type="text" id="paper" class="combobox-input"
-                     autocomplete="off" spellcheck="false"
-                     data-i18n-placeholder="placeholder.paper"
-                     placeholder="例：卷一 / Paper 1 / MC" />
-              <ul class="combobox-list" id="paper-list" hidden></ul>
-            </div>
-          </label>
-          <label data-i18n="label.start_time">開考時間
-            <input id="start-time" type="time" step="60"
-                   data-i18n-placeholder="placeholder.start_time" placeholder="09:00" />
-          </label>
-          <label data-i18n="label.duration">考試時長 (分鐘)
-            <input id="duration" type="number" min="1" max="600"
-                   data-i18n-placeholder="placeholder.duration" placeholder="60" />
-          </label>
-        </div>
-        <p class="hint primary-hint" data-i18n="hint.optional_end">完卷時間可選填, 留空則依開考時間 + 考試時長自動計算。</p>
-      </div>
+<div class="stage" id="stage">
+  <div class="status-pill idle" id="statusPill">未開始</div>
 
-      <div class="card secondary-section">
-        <details>
-          <summary data-i18n="label.optional_settings">▶ 公告及字體設定 (可選)</summary>
-          <div class="row">
-            <label data-i18n="label.notice">公告 / 試場提示
-              <textarea id="notice" rows="3"
-                        data-i18n-placeholder="placeholder.notice"
-                        placeholder="例：第三題 B 選項改為 C；第五題刪除"></textarea>
-            </label>
-          </div>
-          <div class="row">
-            <label data-i18n="label.notice_size">公告字體大小
-              <input id="notice-size" type="range" min="16" max="120" value="36" />
-              <span id="notice-size-val" class="hint">36px</span>
-            </label>
-          </div>
-        </details>
-      </div>
+  <div class="topbar">
+    <div class="title" id="titleText">校園考試計時器</div>
+  </div>
 
-        <div class="row buttons">
-          <button id="test-alarm-btn" class="btn-secondary" data-i18n="button.test_alarm">🔊 試響</button>
-          <button id="fullscreen-btn" class="btn-secondary" data-i18n="button.fullscreen">全螢幕</button>
-          <button id="start-btn" class="btn-primary" data-i18n="button.start">開始考試</button>
-        </div>
+  <div class="clock-wrap">
+    <div class="clock" id="clock">60:00</div>
+    <div class="period" id="period">09:00 — 10:00</div>
+  </div>
 
-        <details class="hint-block">
-          <summary data-i18n="hint.usage_title">使用提示</summary>
-          <ul data-i18n-list="hint.usage_lines"></ul>
-        </details>
-      </div>
+  <div class="info-bar" id="infoBar">
+    <input
+      class="info-input"
+      id="infoInput"
+      type="text"
+      placeholder="（可輸入年級、試場資訊等，按 Enter 確認，雙擊可再改）"
+      autocomplete="off"
+    />
+  </div>
+</div>
 
-      <p class="footer" data-i18n="footer.tagline">© Kyle Yeung</p>
+<div class="alert" id="alertBox">時間到！</div>
+
+<button class="panel-toggle" id="panelToggle" title="開啟控制台">⚙</button>
+
+<div class="panel" id="panel">
+  <div class="panel-head">
+    <h2 id="panelTitle">校園考試計時器</h2>
+    <button class="lang-btn" id="btnLang" type="button">English</button>
+  </div>
+  <div class="sub" id="panelSub">試場投影</div>
+
+  <div class="field">
+    <label id="labelBg">背景圖片</label>
+    <input type="file" id="bgInput" accept="image/*" />
+    <div class="hint" id="hintBg">預設純色背景。如要更換，揀新圖覆蓋即可（只喺瀏覽器內顯示，唔會上傳）。</div>
+  </div>
+
+  <div class="field">
+    <label id="labelTitle">標題文字</label>
+    <input type="text" id="titleInput" value="校園考試計時器" autocomplete="off" />
+  </div>
+
+  <div class="row">
+    <div class="field">
+      <label id="labelStart">開始時間</label>
+      <input type="time" id="startTime" value="09:00" />
     </div>
-  </section>
-
-  <!-- 考試中畫面 — Fold Windows 模式 -->
-  <section id="live" class="screen live hidden">
-
-    <!-- 視窗 1: 考試資訊 (頂部) -->
-    <div id="window-info" class="fold-window fold-info" data-window="info">
-      <div class="window-handle" data-drag-handle>
-        <span class="window-title" data-i18n="live.time_slot">考試時段</span>
-        <span id="live-slot" class="time-slot">— : — — : —</span>
-        <span id="live-status" class="status" data-i18n="live.running">考試中</span>
-      </div>
-      <div class="window-body">
-        <div class="live-subject-display">
-          <span class="subject-label" data-i18n="label.subject">科目</span>
-          <span id="live-subject" class="subject-name">—</span>
-          <span class="subject-sep" id="live-paper-sep" hidden>·</span>
-          <span id="live-paper" class="subject-name" hidden></span>
-        </div>
-      </div>
-      <div class="window-resize" data-resize-handle></div>
+    <div class="field">
+      <label id="labelEnd">結束時間</label>
+      <input type="time" id="endTime" value="10:00" />
     </div>
+  </div>
 
-    <!-- 視窗 2: 倒數計時 (中央, 最大) -->
-    <div id="window-countdown" class="fold-window fold-countdown" data-window="countdown">
-      <div class="window-handle" data-drag-handle>
-        <span class="window-title" data-i18n="live.remaining">剩餘時間</span>
-      </div>
-      <div class="window-body countdown-body">
-        <div id="big-time" class="big-time">--:--:--</div>
-        <div id="big-time-label" class="big-time-label" data-i18n="live.remaining">剩餘時間</div>
-      </div>
-      <div class="window-resize" data-resize-handle></div>
-    </div>
+  <div class="field">
+    <label id="labelWarn">提示時間（秒）</label>
+    <input type="text" id="warnSeconds" value="60, 30, 10" />
+    <div class="hint" id="hintWarn">用逗號分隔，例如 60, 30, 10 會喺最後 60／30／10 秒響提示。</div>
+  </div>
 
-    <!-- 視窗 3: 公告 (底部, 可摺疊) -->
-    <div id="window-notice" class="fold-window fold-notice" data-window="notice">
-      <div class="window-handle" data-drag-handle>
-        <span class="window-title" data-i18n="label.notice">公告 / 試場提示</span>
-        <button class="window-toggle" id="notice-toggle" data-i18n-title="hint.toggle_window"
-                title="最小化/展開">▾</button>
-      </div>
-      <div class="window-body notice-body">
-        <div id="live-notice" class="live-notice" contenteditable="true"
-             data-i18n-placeholder="placeholder.notice"
-             placeholder="公告（可即時編輯）"></div>
-      </div>
-      <div class="window-resize" data-resize-handle></div>
-    </div>
+  <div class="divider"></div>
 
-    <!-- 視窗 4: 控制列 (底部) -->
-    <div id="window-controls" class="fold-window fold-controls" data-window="controls">
-      <button id="pause-btn" class="btn-secondary" data-i18n="button.pause">暫停</button>
-      <button id="end-btn" class="btn-danger" data-i18n="button.end">結束考試</button>
-    </div>
+  <div class="btn-group">
+    <button class="btn btn-primary" id="btnStart" type="button">▶ 開始</button>
+    <button class="btn btn-secondary" id="btnPause" type="button">⏸ 暫停</button>
+    <button class="btn btn-secondary" id="btnResume" type="button">↻ 繼續</button>
+    <button class="btn btn-ghost" id="btnReset" type="button">⟲ 重設</button>
+  </div>
 
-    <!-- 重置視窗位置按鈕 (右上角小按鈕) -->
-    <button id="reset-windows-btn" class="reset-windows" data-i18n-title="hint.reset_windows"
-            title="重設視窗位置">⟳</button>
+  <div class="divider"></div>
 
-  </section>
+  <div class="btn-group">
+    <button class="btn btn-ghost" id="btnFullscreen" type="button">⛶ 投影模式</button>
+    <button class="btn btn-ghost" id="btnTestAlert" type="button">🔔 試響鬧</button>
+  </div>
 
-  <!-- 響鬧畫面: 改用綠色 -->
-  <section id="alarm" class="screen alarm hidden" role="alertdialog" aria-live="assertive">
-    <div class="alarm-content">
-      <div class="alarm-icon">⏰</div>
-      <div class="alarm-title" data-i18n="alarm.title">完卷</div>
-      <div id="alarm-subject" class="alarm-subject">—</div>
-      <div id="alarm-paper" class="alarm-paper" hidden></div>
-      <div class="alarm-hint" data-i18n="alarm.hint">按「結束考試」停止響鬧</div>
-      <!-- v0.3.1: 響鬧時 inline 結束按鈕, 避免用戶搵唔到 fold window 入面嘅按鈕 -->
-      <button id="alarm-end-btn" class="btn-danger alarm-inline-btn" data-i18n="button.end">結束考試</button>
-    </div>
-  </section>
+  <div class="hint" id="hintKeys">
+    <strong>快捷鍵：</strong><br>
+    <span class="kbd">Space</span> 開始 / 暫停 ·
+    <span class="kbd">R</span> 重設 ·
+    <span class="kbd">F</span> 全螢幕 ·
+    <span class="kbd">Esc</span> 退出全螢幕
+  </div>
 
-  <script src="assets/vendor/interact.min.js"></script>
-  <script src="scripts/i18n.js"></script>
-  <script src="scripts/combobox.js"></script>
-  <script src="scripts/fold-windows.js"></script>
-  <script src="scripts/timer.js"></script>
+  <div class="hint" id="hintLogic">
+    <strong>倒數邏輯：</strong>對齊完卷牆鐘。剩餘時間 = 結束時間 − 而家。遲啲先撳開始，就會少咗時間，唔會再跑足成段時長。
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var LANG_KEY = 'hk-exam-timer-lang';
+  var STR = {
+    'zh-HK': {
+      docTitle: '校園考試計時器',
+      title: '校園考試計時器',
+      panelTitle: '校園考試計時器',
+      sub: '試場投影',
+      statusIdle: '未開始',
+      statusLive: '進行中',
+      statusPaused: '已暫停',
+      statusDone: '時間到',
+      infoPh: '（可輸入年級、試場資訊等，按 Enter 確認，雙擊可再改）',
+      bg: '背景圖片',
+      bgHint: '預設純色背景。如要更換，揀新圖覆蓋即可（只喺瀏覽器內顯示，唔會上傳）。',
+      titleLabel: '標題文字',
+      start: '開始時間',
+      end: '結束時間',
+      warn: '提示時間（秒）',
+      warnHint: '用逗號分隔，例如 60, 30, 10 會喺最後 60／30／10 秒響提示。',
+      btnStart: '▶ 開始',
+      btnPause: '⏸ 暫停',
+      btnResume: '↻ 繼續',
+      btnReset: '⟲ 重設',
+      btnFull: '⛶ 投影模式',
+      btnTest: '🔔 試響鬧',
+      keysHtml: '<strong>快捷鍵：</strong><br><span class="kbd">Space</span> 開始 / 暫停 · <span class="kbd">R</span> 重設 · <span class="kbd">F</span> 全螢幕 · <span class="kbd">Esc</span> 退出全螢幕',
+      logicHtml: '<strong>倒數邏輯：</strong>對齊完卷牆鐘。剩餘時間 = 結束時間 − 而家。遲啲先撳開始，就會少咗時間，唔會再跑足成段時長。',
+      timeUp: '時間到！',
+      testAlert: '測試響鬧',
+      badTime: '請輸入有效嘅開始同結束時間',
+      langBtn: 'English',
+      panelToggle: '開啟控制台'
+    },
+    en: {
+      docTitle: 'School Exam Timer',
+      title: 'School Exam Timer',
+      panelTitle: 'School Exam Timer',
+      sub: 'Exam-room projection',
+      statusIdle: 'Not started',
+      statusLive: 'In progress',
+      statusPaused: 'Paused',
+      statusDone: 'Time up',
+      infoPh: '(Year group or room notes. Enter to confirm, double-click to edit again)',
+      bg: 'Background image',
+      bgHint: 'Solid colour by default. Choose an image to replace it (shown only in this browser, never uploaded).',
+      titleLabel: 'Title',
+      start: 'Start time',
+      end: 'End time',
+      warn: 'Warning times (seconds)',
+      warnHint: 'Comma-separated. For example 60, 30, 10 beeps at the last 60 / 30 / 10 seconds.',
+      btnStart: '▶ Start',
+      btnPause: '⏸ Pause',
+      btnResume: '↻ Resume',
+      btnReset: '⟲ Reset',
+      btnFull: '⛶ Project',
+      btnTest: '🔔 Test alarm',
+      keysHtml: '<strong>Shortcuts:</strong><br><span class="kbd">Space</span> start / pause · <span class="kbd">R</span> reset · <span class="kbd">F</span> fullscreen · <span class="kbd">Esc</span> exit fullscreen',
+      logicHtml: '<strong>Countdown:</strong> follows the wall-clock finish time. Time remaining = end − now. Starting late leaves less time; it does not run the full duration.',
+      timeUp: "Time's up!",
+      testAlert: 'Test alarm',
+      badTime: 'Enter a valid start and end time',
+      langBtn: '繁體中文',
+      panelToggle: 'Open controls'
+    }
+  };
+
+  var stage = document.getElementById('stage');
+  var clockEl = document.getElementById('clock');
+  var periodEl = document.getElementById('period');
+  var statusPill = document.getElementById('statusPill');
+  var infoBar = document.getElementById('infoBar');
+  var infoInput = document.getElementById('infoInput');
+  var titleEl = document.getElementById('titleText');
+  var alertBox = document.getElementById('alertBox');
+  var panel = document.getElementById('panel');
+  var panelToggle = document.getElementById('panelToggle');
+  var bgInput = document.getElementById('bgInput');
+  var titleInput = document.getElementById('titleInput');
+  var startInput = document.getElementById('startTime');
+  var endInput = document.getElementById('endTime');
+  var warnInput = document.getElementById('warnSeconds');
+  var btnStart = document.getElementById('btnStart');
+  var btnPause = document.getElementById('btnPause');
+  var btnResume = document.getElementById('btnResume');
+  var btnReset = document.getElementById('btnReset');
+  var btnFullscreen = document.getElementById('btnFullscreen');
+  var btnTestAlert = document.getElementById('btnTestAlert');
+  var btnLang = document.getElementById('btnLang');
+
+  var state = {
+    lang: 'zh-HK',
+    bgUrl: '',
+    running: false,
+    paused: false,
+    pausedAt: null,
+    endWall: null,
+    startWall: null,
+    totalDuration: 0,
+    firedAlerts: new Set(),
+    warnSeconds: [60, 30, 10],
+    prevSec: null,
+    alertKind: null
+  };
+
+  var tickGen = 0;
+  var audioCtx = null;
+
+  function t() { return STR[state.lang]; }
+
+  function defaultTitles() {
+    return [STR['zh-HK'].title, STR.en.title];
+  }
+
+  function applyLang(lang) {
+    if (!STR[lang]) lang = 'zh-HK';
+    state.lang = lang;
+    var s = STR[lang];
+    document.documentElement.lang = lang === 'en' ? 'en' : 'zh-HK';
+    document.title = s.docTitle;
+    if (defaultTitles().indexOf(titleInput.value) !== -1 || !titleInput.value) {
+      titleInput.value = s.title;
+      titleEl.textContent = s.title;
+    }
+    document.getElementById('panelTitle').textContent = s.panelTitle;
+    document.getElementById('panelSub').textContent = s.sub;
+    document.getElementById('labelBg').textContent = s.bg;
+    document.getElementById('hintBg').textContent = s.bgHint;
+    document.getElementById('labelTitle').textContent = s.titleLabel;
+    document.getElementById('labelStart').textContent = s.start;
+    document.getElementById('labelEnd').textContent = s.end;
+    document.getElementById('labelWarn').textContent = s.warn;
+    document.getElementById('hintWarn').textContent = s.warnHint;
+    btnStart.textContent = s.btnStart;
+    btnPause.textContent = s.btnPause;
+    btnResume.textContent = s.btnResume;
+    btnReset.textContent = s.btnReset;
+    btnFullscreen.textContent = s.btnFull;
+    btnTestAlert.textContent = s.btnTest;
+    document.getElementById('hintKeys').innerHTML = s.keysHtml;
+    document.getElementById('hintLogic').innerHTML = s.logicHtml;
+    infoInput.placeholder = s.infoPh;
+    btnLang.textContent = s.langBtn;
+    panelToggle.title = s.panelToggle;
+    refreshStatus();
+    if (alertBox.classList.contains('visible') && state.alertKind) {
+      alertBox.textContent = state.alertKind === 'test' ? s.testAlert : s.timeUp;
+    }
+    try { localStorage.setItem(LANG_KEY, lang); } catch (e) {}
+  }
+
+  function loadLang() {
+    try {
+      var v = localStorage.getItem(LANG_KEY);
+      if (v === 'en' || v === 'zh-HK') return v;
+    } catch (e) {}
+    return 'zh-HK';
+  }
+
+  bgInput.addEventListener('change', function (e) {
+    var file = e.target.files && e.target.files[0];
+    if (!file) return;
+    if (state.bgUrl) URL.revokeObjectURL(state.bgUrl);
+    state.bgUrl = URL.createObjectURL(file);
+    stage.style.backgroundImage = 'url(' + state.bgUrl + ')';
+    stage.style.backgroundSize = 'cover';
+  });
+
+  titleInput.addEventListener('input', function () {
+    titleEl.textContent = titleInput.value || '';
+  });
+
+  function commitInfo() { infoBar.classList.remove('editing'); }
+  infoInput.addEventListener('focus', function () { infoBar.classList.add('editing'); });
+  infoInput.addEventListener('blur', commitInfo);
+  infoInput.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); infoInput.blur(); }
+  });
+  infoBar.addEventListener('dblclick', function () { infoInput.focus(); });
+
+  function parseTimeToToday(hhmm) {
+    if (!hhmm) return null;
+    var parts = hhmm.split(':');
+    var h = Number(parts[0]);
+    var m = Number(parts[1]);
+    if (!Number.isFinite(h) || !Number.isFinite(m)) return null;
+    var d = new Date();
+    d.setHours(h, m, 0, 0);
+    return d;
+  }
+
+  function formatHHMM(d) {
+    return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+  }
+
+  function formatRemaining(ms) {
+    if (ms < 0) ms = 0;
+    var total = Math.ceil(ms / 1000);
+    var m = Math.floor(total / 60);
+    var s = total % 60;
+    return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+  }
+
+  function getAudioCtx() {
+    var AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return null;
+    if (!audioCtx) audioCtx = new AC();
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume().catch(function () {});
+    }
+    return audioCtx;
+  }
+
+  function beep(freq, dur) {
+    try {
+      var ctx = getAudioCtx();
+      if (!ctx) return;
+      var osc = ctx.createOscillator();
+      var gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.value = freq;
+      osc.type = 'sine';
+      var t0 = ctx.currentTime;
+      gain.gain.setValueAtTime(0.0001, t0);
+      gain.gain.exponentialRampToValueAtTime(0.25, t0 + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      osc.start(t0);
+      osc.stop(t0 + dur + 0.02);
+    } catch (e) {}
+  }
+
+  function playAlertSequence() {
+    beep(660, 0.2);
+    setTimeout(function () { beep(880, 0.2); }, 250);
+    setTimeout(function () { beep(1100, 0.4); }, 500);
+  }
+
+  function showAlert(kind) {
+    state.alertKind = kind;
+    alertBox.textContent = kind === 'test' ? t().testAlert : t().timeUp;
+    alertBox.classList.add('visible');
+  }
+  function hideAlert() {
+    state.alertKind = null;
+    alertBox.classList.remove('visible');
+  }
+
+  function computeSchedule() {
+    var start = parseTimeToToday(startInput.value);
+    var end = parseTimeToToday(endInput.value);
+    if (!start || !end) return false;
+    if (end.getTime() <= start.getTime()) end.setDate(end.getDate() + 1);
+    state.startWall = start.getTime();
+    state.endWall = end.getTime();
+    state.totalDuration = state.endWall - state.startWall;
+    return state.totalDuration > 0;
+  }
+
+  function refreshStatus() {
+    var s = t();
+    var kind = 'idle';
+    var text = s.statusIdle;
+    if (state.firedAlerts.has('done')) {
+      kind = 'done';
+      text = s.statusDone;
+    } else if (state.running && state.paused) {
+      kind = 'paused';
+      text = s.statusPaused;
+    } else if (state.running) {
+      kind = 'live';
+      text = s.statusLive;
+    }
+    statusPill.className = 'status-pill ' + kind;
+    statusPill.textContent = text;
+  }
+
+  function parseWarnings() {
+    var list = warnInput.value.split(',').map(function (part) {
+      return parseInt(part.trim(), 10);
+    }).filter(function (n) { return Number.isFinite(n) && n > 0; });
+    state.warnSeconds = list.length ? list : [60, 30, 10];
+  }
+
+  function updatePeriod() {
+    if (!state.startWall || !state.endWall) {
+      periodEl.textContent = '--:-- — --:--';
+      return;
+    }
+    periodEl.textContent = formatHHMM(new Date(state.startWall)) + ' — ' + formatHHMM(new Date(state.endWall));
+  }
+
+  function showIdlePreview() {
+    if (state.running) return;
+    if (!computeSchedule()) return;
+    clockEl.textContent = formatRemaining(state.totalDuration);
+    clockEl.className = 'clock';
+    updatePeriod();
+  }
+
+  function fireWarning(w) {
+    if (state.firedAlerts.has('w' + w) || state.firedAlerts.has(w)) return;
+    state.firedAlerts.add(w);
+    beep(1200, 0.12);
+    if (navigator.vibrate) {
+      try { navigator.vibrate(150); } catch (e) {}
+    }
+  }
+
+  function checkWarnings(remaining) {
+    var sec = Math.ceil(Math.max(0, remaining) / 1000);
+    var prev = state.prevSec;
+    if (prev == null) {
+      state.prevSec = sec;
+      if (sec > 0) {
+        state.warnSeconds.forEach(function (w) {
+          if (w === sec) fireWarning(w);
+        });
+      }
+      return;
+    }
+    state.warnSeconds.forEach(function (w) {
+      if (prev > w && sec <= w) fireWarning(w);
+    });
+    state.prevSec = sec;
+  }
+
+  function render(remaining) {
+    clockEl.textContent = formatRemaining(remaining);
+    checkWarnings(remaining);
+    clockEl.classList.remove('warn', 'danger', 'done');
+    if (remaining <= 0) {
+      clockEl.classList.add('done');
+      if (!state.firedAlerts.has('done')) {
+        state.firedAlerts.add('done');
+        refreshStatus();
+        showAlert('timeup');
+        playAlertSequence();
+        if (navigator.vibrate) {
+          try { navigator.vibrate([400, 200, 400, 200, 600]); } catch (e) {}
+        }
+      }
+      return false;
+    }
+    if (remaining <= 10000) clockEl.classList.add('danger');
+    else if (remaining <= 60000) clockEl.classList.add('warn');
+    return true;
+  }
+
+  function schedule(gen) {
+    setTimeout(function () {
+      if (gen !== tickGen) return;
+      tick();
+    }, 100);
+  }
+
+  function tick() {
+    if (!state.running || state.paused) return;
+    var gen = tickGen;
+    var remaining = state.paused && state.pausedAt
+      ? state.endWall - state.pausedAt
+      : state.endWall - Date.now();
+    var keep = render(remaining);
+    if (!keep) return;
+    if (gen !== tickGen || !state.running || state.paused) return;
+    schedule(gen);
+  }
+
+  function start() {
+    parseWarnings();
+    if (!computeSchedule()) {
+      window.alert(t().badTime);
+      return;
+    }
+    tickGen++;
+    state.running = true;
+    state.paused = false;
+    state.pausedAt = null;
+    state.firedAlerts = new Set();
+    state.prevSec = null;
+    updatePeriod();
+    hideAlert();
+    refreshStatus();
+    tick();
+  }
+
+  function pause() {
+    if (!state.running || state.paused) return;
+    state.paused = true;
+    state.pausedAt = Date.now();
+    tickGen++;
+    refreshStatus();
+    clockEl.textContent = formatRemaining(state.endWall - state.pausedAt);
+  }
+
+  function resume() {
+    if (!state.running || !state.paused) return;
+    state.paused = false;
+    state.pausedAt = null;
+    tickGen++;
+    refreshStatus();
+    tick();
+  }
+
+  function reset() {
+    tickGen++;
+    state.running = false;
+    state.paused = false;
+    state.pausedAt = null;
+    state.firedAlerts = new Set();
+    state.prevSec = null;
+    clockEl.className = 'clock';
+    hideAlert();
+    refreshStatus();
+    showIdlePreview();
+  }
+
+  btnStart.addEventListener('click', start);
+  btnPause.addEventListener('click', pause);
+  btnResume.addEventListener('click', resume);
+  btnReset.addEventListener('click', reset);
+
+  function toggleProjector() {
+    document.body.classList.toggle('projector-mode');
+    if (document.body.classList.contains('projector-mode')) {
+      panel.classList.add('collapsed');
+      panelToggle.classList.add('visible');
+      if (document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen().catch(function () {});
+      }
+    } else {
+      panel.classList.remove('collapsed');
+      panelToggle.classList.remove('visible');
+      if (document.fullscreenElement && document.exitFullscreen) {
+        document.exitFullscreen().catch(function () {});
+      }
+    }
+  }
+  btnFullscreen.addEventListener('click', toggleProjector);
+  panelToggle.addEventListener('click', toggleProjector);
+
+  btnTestAlert.addEventListener('click', function () {
+    showAlert('test');
+    playAlertSequence();
+    setTimeout(function () {
+      if (state.alertKind === 'test') hideAlert();
+    }, 1500);
+  });
+
+  document.addEventListener('fullscreenchange', function () {
+    if (!document.fullscreenElement) {
+      document.body.classList.remove('projector-mode');
+      panel.classList.remove('collapsed');
+      panelToggle.classList.remove('visible');
+    }
+  });
+
+  document.addEventListener('keydown', function (e) {
+    var tag = e.target && e.target.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA') {
+      if (e.key === 'Escape') e.target.blur();
+      return;
+    }
+    if (e.key === ' ' || e.code === 'Space') {
+      e.preventDefault();
+      if (state.running && !state.paused) pause();
+      else if (state.running && state.paused) resume();
+      else start();
+    } else if (e.key === 'r' || e.key === 'R') {
+      reset();
+    } else if (e.key === 'f' || e.key === 'F') {
+      toggleProjector();
+    }
+  });
+
+  btnLang.addEventListener('click', function () {
+    applyLang(state.lang === 'en' ? 'zh-HK' : 'en');
+  });
+
+  warnInput.addEventListener('change', parseWarnings);
+  startInput.addEventListener('change', showIdlePreview);
+  endInput.addEventListener('change', showIdlePreview);
+
+  window.addEventListener('beforeunload', function (e) {
+    if (state.running && !state.paused && !state.firedAlerts.has('done')) {
+      e.preventDefault();
+      e.returnValue = '';
+    }
+  });
+
+  applyLang(loadLang());
+  parseWarnings();
+  reset();
+})();
+</script>
 </body>
 </html>

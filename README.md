@@ -14,6 +14,6 @@
 
 **Live Demo:** <https://kyleyct.github.io/hk-exam-timer/>
 
-The interface defaults to Traditional Chinese (Hong Kong) and can switch to English. Set the start and end times, then press Start. The countdown follows the wall-clock finish time: if you start late, time remaining is end minus now, not the full duration. Space pauses and resumes.
+The interface defaults to Traditional Chinese (Hong Kong) and can switch to English. Set the start and end times, then press Start. The countdown follows the wall-clock finish time: if you start late, time remaining is end minus now, not the full duration. Space pauses and resumes. During a running session, **+1 / +5 / +15 minute** overtime buttons extend the countdown (and the displayed end time).
 
 © Kyle Yeung · [MIT License](LICENSE)

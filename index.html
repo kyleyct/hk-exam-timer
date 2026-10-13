@@ -345,6 +345,29 @@
     gap: 8px;
     margin-top: 4px;
   }
+  .btn-group.overtime {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+  .btn-overtime {
+    background: #ffffff;
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+  .btn-overtime:hover {
+    background: #fff0f6;
+  }
+  .btn-overtime:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    filter: none;
+  }
+  .overtime-label {
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--muted);
+    margin: 2px 0 0;
+    letter-spacing: 0.04em;
+  }
 
   .hint {
     font-size: 11px;
@@ -620,6 +643,13 @@
     <button class="btn btn-ghost" id="btnReset" type="button">⟲ 重設</button>
   </div>
 
+  <div class="overtime-label" id="overtimeLabel">加時（考試臨時延長）</div>
+  <div class="btn-group overtime">
+    <button class="btn btn-overtime" id="btnOt1" type="button" disabled>+1 分鐘</button>
+    <button class="btn btn-overtime" id="btnOt5" type="button" disabled>+5 分鐘</button>
+    <button class="btn btn-overtime" id="btnOt15" type="button" disabled>+15 分鐘</button>
+  </div>
+
   <div class="divider"></div>
 
   <div class="btn-group">
@@ -680,7 +710,11 @@
       testAlert: '測試響鬧',
       badTime: '請輸入有效嘅開始同結束時間',
       langBtn: 'English',
-      panelToggle: '開啟控制台'
+      panelToggle: '開啟控制台',
+      overtimeLabel: '加時（考試臨時延長）',
+      btnOt1: '+1 分鐘',
+      btnOt5: '+5 分鐘',
+      btnOt15: '+15 分鐘'
     },
     en: {
       docTitle: 'Subject / level',
@@ -711,7 +745,11 @@
       testAlert: 'Test alarm',
       badTime: 'Enter a valid start and end time',
       langBtn: '繁體中文',
-      panelToggle: 'Open controls'
+      panelToggle: 'Open controls',
+      overtimeLabel: 'Overtime (sudden extension)',
+      btnOt1: '+1 min',
+      btnOt5: '+5 min',
+      btnOt15: '+15 min'
     }
   };
 
@@ -738,6 +776,10 @@
   var btnFullscreen = document.getElementById('btnFullscreen');
   var btnTestAlert = document.getElementById('btnTestAlert');
   var btnLang = document.getElementById('btnLang');
+  var btnOt1 = document.getElementById('btnOt1');
+  var btnOt5 = document.getElementById('btnOt5');
+  var btnOt15 = document.getElementById('btnOt15');
+  var overtimeLabel = document.getElementById('overtimeLabel');
 
   var state = {
     lang: 'zh-HK',
@@ -787,6 +829,10 @@
     infoInput.placeholder = s.infoPh;
     btnLang.textContent = s.langBtn;
     panelToggle.title = s.panelToggle;
+    overtimeLabel.textContent = s.overtimeLabel;
+    btnOt1.textContent = s.btnOt1;
+    btnOt5.textContent = s.btnOt5;
+    btnOt15.textContent = s.btnOt15;
     refreshStatus();
     if (alertBox.classList.contains('visible') && state.alertKind) {
       alertBox.textContent = state.alertKind === 'test' ? s.testAlert : s.timeUp;
@@ -918,6 +964,7 @@
     }
     statusPill.className = 'status-pill ' + kind;
     statusPill.textContent = text;
+    syncOvertimeButtons();
   }
 
   function parseWarnings() {
@@ -1060,10 +1107,59 @@
     showIdlePreview();
   }
 
+
+  function syncOvertimeButtons() {
+    var on = !!state.running;
+    btnOt1.disabled = !on;
+    btnOt5.disabled = !on;
+    btnOt15.disabled = !on;
+  }
+
+  function addOvertime(minutes) {
+    if (!state.running || !state.endWall) return;
+    var ms = minutes * 60 * 1000;
+    state.endWall += ms;
+    state.totalDuration += ms;
+    // Keep end-time input in sync with wall-clock finish
+    endInput.value = formatHHMM(new Date(state.endWall));
+    updatePeriod();
+    // If we had already hit time-up, clear done state and resume ticking
+    if (state.firedAlerts.has('done')) {
+      state.firedAlerts.delete('done');
+      hideAlert();
+      clockEl.classList.remove('done');
+    }
+    // Re-arm warnings that are still in the future after extension
+    var remainingMs = state.paused && state.pausedAt
+      ? state.endWall - state.pausedAt
+      : state.endWall - Date.now();
+    var remSec = Math.ceil(Math.max(0, remainingMs) / 1000);
+    state.warnSeconds.forEach(function (w) {
+      if (remSec > w) {
+        state.firedAlerts.delete(w);
+        state.firedAlerts.delete('w' + w);
+      }
+    });
+    state.prevSec = remSec;
+    refreshStatus();
+    if (state.paused) {
+      clockEl.textContent = formatRemaining(state.endWall - state.pausedAt);
+      clockEl.classList.remove('warn', 'danger', 'done');
+      if (remainingMs <= 10000) clockEl.classList.add('danger');
+      else if (remainingMs <= 60000) clockEl.classList.add('warn');
+    } else {
+      tickGen++;
+      tick();
+    }
+  }
+
   btnStart.addEventListener('click', start);
   btnPause.addEventListener('click', pause);
   btnResume.addEventListener('click', resume);
   btnReset.addEventListener('click', reset);
+  btnOt1.addEventListener('click', function () { addOvertime(1); });
+  btnOt5.addEventListener('click', function () { addOvertime(5); });
+  btnOt15.addEventListener('click', function () { addOvertime(15); });
 
   function toggleProjector() {
     document.body.classList.toggle('projector-mode');

@@ -614,7 +614,7 @@
   <div class="field">
     <label id="labelBg">背景圖片</label>
     <input type="file" id="bgInput" accept="image/*" />
-    <div class="hint" id="hintBg">預設純色背景。如要更換，揀新圖覆蓋即可（只喺瀏覽器內顯示，唔會上傳）。</div>
+    <div class="hint" id="hintBg">預設純色背景。如要更換，選新圖覆蓋即可（只在瀏覽器內顯示，不會上傳）。</div>
   </div>
 
   <div class="row">
@@ -631,7 +631,7 @@
   <div class="field">
     <label id="labelWarn">提示時間（秒）</label>
     <input type="text" id="warnSeconds" value="60, 30, 10" />
-    <div class="hint" id="hintWarn">用逗號分隔，例如 60, 30, 10 會喺最後 60／30／10 秒響提示。</div>
+    <div class="hint" id="hintWarn">用逗號分隔，例如 60, 30, 10 會在最後 60／30／10 秒發出提示。</div>
   </div>
 
   <div class="divider"></div>
@@ -666,7 +666,7 @@
   </div>
 
   <div class="hint" id="hintLogic">
-    <strong>倒數邏輯：</strong>對齊完卷牆鐘。剩餘時間 = 結束時間 − 而家。遲啲先撳開始，就會少咗時間，唔會再跑足成段時長。
+    <strong>倒數邏輯：</strong>對齊完卷牆鐘。剩餘時間 = 結束時間 − 現在。較遲才按開始，剩餘時間會減少，不會再跑足整段時長。
   </div>
 </div>
 
@@ -693,11 +693,11 @@
       statusDone: '時間到',
       infoPh: '試場備註（按 Enter 確認，雙擊可再改）',
       bg: '背景圖片',
-      bgHint: '預設純色背景。如要更換，揀新圖覆蓋即可（只喺瀏覽器內顯示，唔會上傳）。',
+      bgHint: '預設純色背景。如要更換，選新圖覆蓋即可（只在瀏覽器內顯示，不會上傳）。',
       start: '開始時間',
       end: '結束時間',
       warn: '提示時間（秒）',
-      warnHint: '用逗號分隔，例如 60, 30, 10 會喺最後 60／30／10 秒響提示。',
+      warnHint: '用逗號分隔，例如 60, 30, 10 會在最後 60／30／10 秒發出提示。',
       btnStart: '▶ 開始',
       btnPause: '⏸ 暫停',
       btnResume: '↻ 繼續',
@@ -705,10 +705,10 @@
       btnFull: '⛶ 投影模式',
       btnTest: '🔔 試響鬧',
       keysHtml: '<strong>快捷鍵：</strong><br><span class="kbd">Space</span> 開始 / 暫停 · <span class="kbd">R</span> 重設 · <span class="kbd">F</span> 全螢幕 · <span class="kbd">Esc</span> 退出全螢幕',
-      logicHtml: '<strong>倒數邏輯：</strong>對齊完卷牆鐘。剩餘時間 = 結束時間 − 而家。遲啲先撳開始，就會少咗時間，唔會再跑足成段時長。',
+      logicHtml: '<strong>倒數邏輯：</strong>對齊完卷牆鐘。剩餘時間 = 結束時間 − 現在。較遲才按開始，剩餘時間會減少，不會再跑足整段時長。',
       timeUp: '時間到！',
       testAlert: '測試響鬧',
-      badTime: '請輸入有效嘅開始同結束時間',
+      badTime: '請輸入有效的開始及結束時間',
       langBtn: 'English',
       panelToggle: '開啟控制台',
       overtimeLabel: '加時（考試臨時延長）',
